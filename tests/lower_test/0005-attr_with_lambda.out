@@ -1,12 +1,12 @@
 Ok(
     Expr(
         Lambda {
-            arg: Pattern {
+            arg: ClosePattern {
                 required_names: [
                     "b",
                     "c",
                 ],
-                ellipsis: false,
+                optional_names: {},
             },
             body: Expr(
                 LetIn {

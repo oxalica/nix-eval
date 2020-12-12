@@ -4,7 +4,7 @@ use rnix::types::{
     TypedNode as _, With, Wrapper as _,
 };
 use rnix::{SyntaxKind, TextRange};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryFrom;
 use std::fmt;
 
@@ -264,12 +264,16 @@ impl Lowerer {
 
                 // Then handle `? expr` parts, since they can recursively refer to other arguments.
                 let mut required_names = Vec::new();
+                let mut optional_names = BTreeSet::new();
                 let mut let_exprs = Vec::new();
                 for ent in arg.entries() {
                     let name: SmolStr = ent.name().unwrap().as_str().into();
                     let index = Value::String(name.clone()).into();
                     let or_default = match ent.default() {
-                        Some(default) => Some(self.expr(default)?),
+                        Some(default) => {
+                            optional_names.insert(name.clone());
+                            Some(self.expr(default)?)
+                        }
                         None => {
                             required_names.push(name.clone());
                             None
@@ -299,9 +303,15 @@ impl Lowerer {
                     .into();
                 }
 
-                let arg = LambdaArg::Pattern {
-                    required_names: required_names.into(),
-                    ellipsis: arg.ellipsis(),
+                let arg = if arg.ellipsis() {
+                    LambdaArg::OpenPattern {
+                        required_names: required_names.into(),
+                    }
+                } else {
+                    LambdaArg::ClosePattern {
+                        required_names: required_names.into(),
+                        optional_names,
+                    }
                 };
                 (arg, body)
             }

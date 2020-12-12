@@ -33,12 +33,12 @@ Ok(
                 ),
                 Expr(
                     Lambda {
-                        arg: Pattern {
+                        arg: ClosePattern {
                             required_names: [
                                 "a",
                                 "b",
                             ],
-                            ellipsis: false,
+                            optional_names: {},
                         },
                         body: Expr(
                             LetIn {
@@ -76,12 +76,11 @@ Ok(
                                 ],
                                 body: Expr(
                                     Lambda {
-                                        arg: Pattern {
+                                        arg: OpenPattern {
                                             required_names: [
                                                 "c",
                                                 "d",
                                             ],
-                                            ellipsis: true,
                                         },
                                         body: Expr(
                                             LetIn {
@@ -152,11 +151,10 @@ Ok(
                 ),
                 Expr(
                     Lambda {
-                        arg: Pattern {
+                        arg: OpenPattern {
                             required_names: [
                                 "pkgs",
                             ],
-                            ellipsis: true,
                         },
                         body: Expr(
                             LetIn {
@@ -248,12 +246,13 @@ Ok(
                 ),
                 Expr(
                     Lambda {
-                        arg: Pattern {
+                        arg: ClosePattern {
                             required_names: [
-                                "a",
                                 "b",
                             ],
-                            ellipsis: false,
+                            optional_names: {
+                                "a",
+                            },
                         },
                         body: Expr(
                             LetIn {
@@ -270,7 +269,15 @@ Ok(
                                                     ),
                                                 ),
                                             ),
-                                            or_default: None,
+                                            or_default: Some(
+                                                Expr(
+                                                    Literal(
+                                                        Integer(
+                                                            1,
+                                                        ),
+                                                    ),
+                                                ),
+                                            ),
                                         },
                                     ),
                                     Expr(

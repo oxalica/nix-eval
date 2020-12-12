@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 pub use rnix::types::{BinOpKind, UnaryOpKind};
 pub use rnix::value::Anchor as PathAnchor;
@@ -8,6 +8,10 @@ pub use self::expr_ref::{ExprRef, ExprRefKind};
 
 pub mod expr_ref;
 pub mod lower;
+
+// FIXME: Optimize memory cost.
+static_assertions::assert_eq_size!(Value, [u8; 32]);
+static_assertions::assert_eq_size!(Expr, [u8; 64]);
 
 #[derive(Debug)]
 pub enum Value {
@@ -70,11 +74,15 @@ pub enum Expr {
 
 #[derive(Debug)]
 pub enum LambdaArg {
+    /// `x: expr`
     Bind,
-    Pattern {
+    /// `{ a, b ? expr }: expr`
+    ClosePattern {
         required_names: Box<[SmolStr]>,
-        ellipsis: bool,
+        optional_names: BTreeSet<SmolStr>,
     },
+    /// `{ a, b ? expr, ... }: expr`
+    OpenPattern { required_names: Box<[SmolStr]> },
 }
 
 #[derive(Debug)]
