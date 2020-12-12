@@ -1,0 +1,6 @@
+Err(
+    UndefinedVariable {
+        name: "true",
+        pos: [254; 258),
+    },
+)

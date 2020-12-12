@@ -1,0 +1,166 @@
+Ok(
+    Expr(
+        AttrSet {
+            entries: {
+                "buildPhase": Expr(
+                    Str {
+                        parts: [
+                            Literal(
+                                "echo ",
+                            ),
+                            Expr(
+                                Expr(
+                                    BinOp {
+                                        operator: Add,
+                                        lhs: Expr(
+                                            Str {
+                                                parts: [
+                                                    Literal(
+                                                        "hello",
+                                                    ),
+                                                ],
+                                            },
+                                        ),
+                                        rhs: Expr(
+                                            Str {
+                                                parts: [
+                                                    Literal(
+                                                        "world",
+                                                    ),
+                                                ],
+                                            },
+                                        ),
+                                    },
+                                ),
+                            ),
+                            Literal(
+                                "",
+                            ),
+                        ],
+                    },
+                ),
+                "cond": Expr(
+                    IfElse {
+                        condition: Expr(
+                            BinOp {
+                                operator: Equal,
+                                lhs: Expr(
+                                    Literal(
+                                        Integer(
+                                            0,
+                                        ),
+                                    ),
+                                ),
+                                rhs: Expr(
+                                    Literal(
+                                        Integer(
+                                            0,
+                                        ),
+                                    ),
+                                ),
+                            },
+                        ),
+                        then_body: Expr(
+                            Literal(
+                                Integer(
+                                    42,
+                                ),
+                            ),
+                        ),
+                        else_body: Expr(
+                            Literal(
+                                Float(
+                                    4.2,
+                                ),
+                            ),
+                        ),
+                    },
+                ),
+                "foo": Expr(
+                    Select {
+                        set: Expr(
+                            AttrSet {
+                                entries: {},
+                                dynamics: [],
+                            },
+                        ),
+                        index: Expr(
+                            Literal(
+                                String(
+                                    "a",
+                                ),
+                            ),
+                        ),
+                        or_default: Some(
+                            Expr(
+                                Select {
+                                    set: Expr(
+                                        AttrSet {
+                                            entries: {},
+                                            dynamics: [],
+                                        },
+                                    ),
+                                    index: Expr(
+                                        Literal(
+                                            String(
+                                                "b",
+                                            ),
+                                        ),
+                                    ),
+                                    or_default: None,
+                                },
+                            ),
+                        ),
+                    },
+                ),
+                "hello": Expr(
+                    Str {
+                        parts: [
+                            Literal(
+                                "world",
+                            ),
+                        ],
+                    },
+                ),
+                "paths": Expr(
+                    List {
+                        items: [
+                            Expr(
+                                Literal(
+                                    Path(
+                                        Store,
+                                        "nix",
+                                    ),
+                                ),
+                            ),
+                            Expr(
+                                Literal(
+                                    Path(
+                                        Relative,
+                                        "./nix",
+                                    ),
+                                ),
+                            ),
+                            Expr(
+                                Literal(
+                                    Path(
+                                        Absolute,
+                                        "/nix",
+                                    ),
+                                ),
+                            ),
+                            Expr(
+                                Literal(
+                                    String(
+                                        "http://nix",
+                                    ),
+                                ),
+                            ),
+                        ],
+                    },
+                ),
+            },
+            dynamics: [],
+        },
+    ),
+)

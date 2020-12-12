@@ -1,0 +1,329 @@
+Ok(
+    Expr(
+        List {
+            items: [
+                Expr(
+                    Lambda {
+                        arg: Bind,
+                        body: Debruijn(
+                            0,
+                        ),
+                    },
+                ),
+                Expr(
+                    Lambda {
+                        arg: Bind,
+                        body: Expr(
+                            Lambda {
+                                arg: Bind,
+                                body: Expr(
+                                    BinOp {
+                                        operator: Add,
+                                        lhs: Debruijn(
+                                            1,
+                                        ),
+                                        rhs: Debruijn(
+                                            0,
+                                        ),
+                                    },
+                                ),
+                            },
+                        ),
+                    },
+                ),
+                Expr(
+                    Lambda {
+                        arg: Pattern {
+                            required_names: [
+                                "a",
+                                "b",
+                            ],
+                            ellipsis: false,
+                        },
+                        body: Expr(
+                            LetIn {
+                                exprs: [
+                                    Expr(
+                                        Select {
+                                            set: Debruijn(
+                                                2,
+                                            ),
+                                            index: Expr(
+                                                Literal(
+                                                    String(
+                                                        "a",
+                                                    ),
+                                                ),
+                                            ),
+                                            or_default: None,
+                                        },
+                                    ),
+                                    Expr(
+                                        Select {
+                                            set: Debruijn(
+                                                2,
+                                            ),
+                                            index: Expr(
+                                                Literal(
+                                                    String(
+                                                        "b",
+                                                    ),
+                                                ),
+                                            ),
+                                            or_default: None,
+                                        },
+                                    ),
+                                ],
+                                body: Expr(
+                                    Lambda {
+                                        arg: Pattern {
+                                            required_names: [
+                                                "c",
+                                                "d",
+                                            ],
+                                            ellipsis: true,
+                                        },
+                                        body: Expr(
+                                            LetIn {
+                                                exprs: [
+                                                    Expr(
+                                                        Select {
+                                                            set: Debruijn(
+                                                                2,
+                                                            ),
+                                                            index: Expr(
+                                                                Literal(
+                                                                    String(
+                                                                        "c",
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                            or_default: None,
+                                                        },
+                                                    ),
+                                                    Expr(
+                                                        Select {
+                                                            set: Debruijn(
+                                                                2,
+                                                            ),
+                                                            index: Expr(
+                                                                Literal(
+                                                                    String(
+                                                                        "d",
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                            or_default: None,
+                                                        },
+                                                    ),
+                                                ],
+                                                body: Expr(
+                                                    BinOp {
+                                                        operator: Add,
+                                                        lhs: Expr(
+                                                            Apply {
+                                                                lambda: Debruijn(
+                                                                    4,
+                                                                ),
+                                                                value: Debruijn(
+                                                                    1,
+                                                                ),
+                                                            },
+                                                        ),
+                                                        rhs: Expr(
+                                                            Apply {
+                                                                lambda: Debruijn(
+                                                                    3,
+                                                                ),
+                                                                value: Debruijn(
+                                                                    0,
+                                                                ),
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    },
+                                ),
+                            },
+                        ),
+                    },
+                ),
+                Expr(
+                    Lambda {
+                        arg: Pattern {
+                            required_names: [
+                                "pkgs",
+                            ],
+                            ellipsis: true,
+                        },
+                        body: Expr(
+                            LetIn {
+                                exprs: [
+                                    Expr(
+                                        Select {
+                                            set: Debruijn(
+                                                3,
+                                            ),
+                                            index: Expr(
+                                                Literal(
+                                                    String(
+                                                        "hello",
+                                                    ),
+                                                ),
+                                            ),
+                                            or_default: Some(
+                                                Expr(
+                                                    Select {
+                                                        set: Debruijn(
+                                                            1,
+                                                        ),
+                                                        index: Expr(
+                                                            Literal(
+                                                                String(
+                                                                    "hello",
+                                                                ),
+                                                            ),
+                                                        ),
+                                                        or_default: None,
+                                                    },
+                                                ),
+                                            ),
+                                        },
+                                    ),
+                                    Expr(
+                                        Select {
+                                            set: Debruijn(
+                                                3,
+                                            ),
+                                            index: Expr(
+                                                Literal(
+                                                    String(
+                                                        "pkgs",
+                                                    ),
+                                                ),
+                                            ),
+                                            or_default: None,
+                                        },
+                                    ),
+                                    Expr(
+                                        Select {
+                                            set: Debruijn(
+                                                3,
+                                            ),
+                                            index: Expr(
+                                                Literal(
+                                                    String(
+                                                        "world",
+                                                    ),
+                                                ),
+                                            ),
+                                            or_default: Some(
+                                                Debruijn(
+                                                    3,
+                                                ),
+                                            ),
+                                        },
+                                    ),
+                                ],
+                                body: Expr(
+                                    List {
+                                        items: [
+                                            Debruijn(
+                                                2,
+                                            ),
+                                            Debruijn(
+                                                1,
+                                            ),
+                                            Debruijn(
+                                                0,
+                                            ),
+                                        ],
+                                    },
+                                ),
+                            },
+                        ),
+                    },
+                ),
+                Expr(
+                    Lambda {
+                        arg: Pattern {
+                            required_names: [
+                                "a",
+                                "b",
+                            ],
+                            ellipsis: false,
+                        },
+                        body: Expr(
+                            LetIn {
+                                exprs: [
+                                    Expr(
+                                        Select {
+                                            set: Debruijn(
+                                                2,
+                                            ),
+                                            index: Expr(
+                                                Literal(
+                                                    String(
+                                                        "a",
+                                                    ),
+                                                ),
+                                            ),
+                                            or_default: None,
+                                        },
+                                    ),
+                                    Expr(
+                                        Select {
+                                            set: Debruijn(
+                                                2,
+                                            ),
+                                            index: Expr(
+                                                Literal(
+                                                    String(
+                                                        "b",
+                                                    ),
+                                                ),
+                                            ),
+                                            or_default: None,
+                                        },
+                                    ),
+                                ],
+                                body: Expr(
+                                    BinOp {
+                                        operator: Add,
+                                        lhs: Debruijn(
+                                            1,
+                                        ),
+                                        rhs: Expr(
+                                            Select {
+                                                set: Debruijn(
+                                                    2,
+                                                ),
+                                                index: Expr(
+                                                    Literal(
+                                                        String(
+                                                            "b",
+                                                        ),
+                                                    ),
+                                                ),
+                                                or_default: None,
+                                            },
+                                        ),
+                                    },
+                                ),
+                            },
+                        ),
+                    },
+                ),
+                Expr(
+                    Literal(
+                        String(
+                            "this:is:string",
+                        ),
+                    ),
+                ),
+            ],
+        },
+    ),
+)

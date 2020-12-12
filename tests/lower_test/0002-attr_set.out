@@ -1,0 +1,379 @@
+Ok(
+    Expr(
+        List {
+            items: [
+                Expr(
+                    AttrSet {
+                        entries: {
+                            "a": Expr(
+                                AttrSet {
+                                    entries: {
+                                        "a": Expr(
+                                            Literal(
+                                                Integer(
+                                                    1,
+                                                ),
+                                            ),
+                                        ),
+                                        "b": Expr(
+                                            AttrSet {
+                                                entries: {
+                                                    "c": Expr(
+                                                        Literal(
+                                                            Integer(
+                                                                2,
+                                                            ),
+                                                        ),
+                                                    ),
+                                                    "d": Expr(
+                                                        Literal(
+                                                            Integer(
+                                                                3,
+                                                            ),
+                                                        ),
+                                                    ),
+                                                },
+                                                dynamics: [],
+                                            },
+                                        ),
+                                    },
+                                    dynamics: [],
+                                },
+                            ),
+                        },
+                        dynamics: [],
+                    },
+                ),
+                Expr(
+                    LetIn {
+                        exprs: [
+                            Expr(
+                                AttrSet {
+                                    entries: {
+                                        "a": Debruijn(
+                                            1,
+                                        ),
+                                        "b": Expr(
+                                            AttrSet {
+                                                entries: {
+                                                    "c": Expr(
+                                                        Literal(
+                                                            Integer(
+                                                                2,
+                                                            ),
+                                                        ),
+                                                    ),
+                                                    "d": Debruijn(
+                                                        0,
+                                                    ),
+                                                },
+                                                dynamics: [],
+                                            },
+                                        ),
+                                    },
+                                    dynamics: [],
+                                },
+                            ),
+                            Expr(
+                                Literal(
+                                    Integer(
+                                        42,
+                                    ),
+                                ),
+                            ),
+                        ],
+                        body: Expr(
+                            AttrSet {
+                                entries: {
+                                    "a": Debruijn(
+                                        1,
+                                    ),
+                                    "c": Debruijn(
+                                        0,
+                                    ),
+                                },
+                                dynamics: [],
+                            },
+                        ),
+                    },
+                ),
+                Expr(
+                    LetIn {
+                        exprs: [
+                            Expr(
+                                Literal(
+                                    Integer(
+                                        1,
+                                    ),
+                                ),
+                            ),
+                            Expr(
+                                Str {
+                                    parts: [
+                                        Literal(
+                                            "2",
+                                        ),
+                                    ],
+                                },
+                            ),
+                        ],
+                        body: Expr(
+                            AttrSet {
+                                entries: {
+                                    "a": Debruijn(
+                                        1,
+                                    ),
+                                    "b": Debruijn(
+                                        0,
+                                    ),
+                                },
+                                dynamics: [
+                                    (
+                                        Expr(
+                                            BinOp {
+                                                operator: Add,
+                                                lhs: Expr(
+                                                    Str {
+                                                        parts: [
+                                                            Literal(
+                                                                "a",
+                                                            ),
+                                                        ],
+                                                    },
+                                                ),
+                                                rhs: Debruijn(
+                                                    0,
+                                                ),
+                                            },
+                                        ),
+                                        Debruijn(
+                                            1,
+                                        ),
+                                    ),
+                                ],
+                            },
+                        ),
+                    },
+                ),
+                Expr(
+                    Lambda {
+                        arg: Bind,
+                        body: Expr(
+                            Lambda {
+                                arg: Bind,
+                                body: Expr(
+                                    Lambda {
+                                        arg: Bind,
+                                        body: Expr(
+                                            LetIn {
+                                                exprs: [
+                                                    Debruijn(
+                                                        4,
+                                                    ),
+                                                    Debruijn(
+                                                        3,
+                                                    ),
+                                                ],
+                                                body: Expr(
+                                                    AttrSet {
+                                                        entries: {
+                                                            "a": Expr(
+                                                                Select {
+                                                                    set: Debruijn(
+                                                                        1,
+                                                                    ),
+                                                                    index: Expr(
+                                                                        Literal(
+                                                                            String(
+                                                                                "a",
+                                                                            ),
+                                                                        ),
+                                                                    ),
+                                                                    or_default: None,
+                                                                },
+                                                            ),
+                                                            "b": Expr(
+                                                                Select {
+                                                                    set: Debruijn(
+                                                                        1,
+                                                                    ),
+                                                                    index: Expr(
+                                                                        Literal(
+                                                                            String(
+                                                                                "b",
+                                                                            ),
+                                                                        ),
+                                                                    ),
+                                                                    or_default: None,
+                                                                },
+                                                            ),
+                                                            "c": Expr(
+                                                                Select {
+                                                                    set: Debruijn(
+                                                                        0,
+                                                                    ),
+                                                                    index: Expr(
+                                                                        Literal(
+                                                                            String(
+                                                                                "c",
+                                                                            ),
+                                                                        ),
+                                                                    ),
+                                                                    or_default: None,
+                                                                },
+                                                            ),
+                                                            "d": Expr(
+                                                                Select {
+                                                                    set: Debruijn(
+                                                                        0,
+                                                                    ),
+                                                                    index: Expr(
+                                                                        Literal(
+                                                                            String(
+                                                                                "d",
+                                                                            ),
+                                                                        ),
+                                                                    ),
+                                                                    or_default: None,
+                                                                },
+                                                            ),
+                                                            "e": Debruijn(
+                                                                2,
+                                                            ),
+                                                            "x": Debruijn(
+                                                                4,
+                                                            ),
+                                                        },
+                                                        dynamics: [],
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    },
+                                ),
+                            },
+                        ),
+                    },
+                ),
+                Expr(
+                    Lambda {
+                        arg: Bind,
+                        body: Expr(
+                            Lambda {
+                                arg: Bind,
+                                body: Expr(
+                                    Lambda {
+                                        arg: Bind,
+                                        body: Expr(
+                                            LetIn {
+                                                exprs: [
+                                                    Debruijn(
+                                                        0,
+                                                    ),
+                                                    Debruijn(
+                                                        9,
+                                                    ),
+                                                    Debruijn(
+                                                        4,
+                                                    ),
+                                                    Expr(
+                                                        Select {
+                                                            set: Debruijn(
+                                                                7,
+                                                            ),
+                                                            index: Expr(
+                                                                Literal(
+                                                                    String(
+                                                                        "a",
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                            or_default: None,
+                                                        },
+                                                    ),
+                                                    Expr(
+                                                        Select {
+                                                            set: Debruijn(
+                                                                7,
+                                                            ),
+                                                            index: Expr(
+                                                                Literal(
+                                                                    String(
+                                                                        "b",
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                            or_default: None,
+                                                        },
+                                                    ),
+                                                    Expr(
+                                                        Select {
+                                                            set: Debruijn(
+                                                                6,
+                                                            ),
+                                                            index: Expr(
+                                                                Literal(
+                                                                    String(
+                                                                        "c",
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                            or_default: None,
+                                                        },
+                                                    ),
+                                                    Expr(
+                                                        Select {
+                                                            set: Debruijn(
+                                                                6,
+                                                            ),
+                                                            index: Expr(
+                                                                Literal(
+                                                                    String(
+                                                                        "d",
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                            or_default: None,
+                                                        },
+                                                    ),
+                                                    Debruijn(
+                                                        10,
+                                                    ),
+                                                ],
+                                                body: Expr(
+                                                    AttrSet {
+                                                        entries: {
+                                                            "a": Debruijn(
+                                                                4,
+                                                            ),
+                                                            "b": Debruijn(
+                                                                3,
+                                                            ),
+                                                            "c": Debruijn(
+                                                                2,
+                                                            ),
+                                                            "d": Debruijn(
+                                                                1,
+                                                            ),
+                                                            "e": Debruijn(
+                                                                5,
+                                                            ),
+                                                            "x": Debruijn(
+                                                                0,
+                                                            ),
+                                                        },
+                                                        dynamics: [],
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    },
+                                ),
+                            },
+                        ),
+                    },
+                ),
+            ],
+        },
+    ),
+)

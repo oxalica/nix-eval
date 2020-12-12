@@ -1,0 +1,90 @@
+Ok(
+    Expr(
+        Lambda {
+            arg: Pattern {
+                required_names: [
+                    "b",
+                    "c",
+                ],
+                ellipsis: false,
+            },
+            body: Expr(
+                LetIn {
+                    exprs: [
+                        Expr(
+                            Select {
+                                set: Debruijn(
+                                    2,
+                                ),
+                                index: Expr(
+                                    Literal(
+                                        String(
+                                            "b",
+                                        ),
+                                    ),
+                                ),
+                                or_default: None,
+                            },
+                        ),
+                        Expr(
+                            Select {
+                                set: Debruijn(
+                                    2,
+                                ),
+                                index: Expr(
+                                    Literal(
+                                        String(
+                                            "c",
+                                        ),
+                                    ),
+                                ),
+                                or_default: None,
+                            },
+                        ),
+                    ],
+                    body: Expr(
+                        LetIn {
+                            exprs: [
+                                Debruijn(
+                                    1,
+                                ),
+                            ],
+                            body: Expr(
+                                AttrSet {
+                                    entries: {
+                                        "a": Expr(
+                                            Literal(
+                                                Integer(
+                                                    1,
+                                                ),
+                                            ),
+                                        ),
+                                        "b": Debruijn(
+                                            2,
+                                        ),
+                                        "d": Expr(
+                                            Select {
+                                                set: Debruijn(
+                                                    0,
+                                                ),
+                                                index: Expr(
+                                                    Literal(
+                                                        String(
+                                                            "d",
+                                                        ),
+                                                    ),
+                                                ),
+                                                or_default: None,
+                                            },
+                                        ),
+                                    },
+                                    dynamics: [],
+                                },
+                            ),
+                        },
+                    ),
+                },
+            ),
+        },
+    ),
+)
