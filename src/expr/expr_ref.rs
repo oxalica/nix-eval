@@ -15,6 +15,9 @@ pub struct ExprRef {
 }
 static_assertions::const_assert!(std::mem::align_of::<Expr>() >= 4);
 
+unsafe impl Send for ExprRef {}
+unsafe impl Sync for ExprRef {}
+
 #[derive(Debug)]
 pub enum ExprRefKind<'a> {
     Expr(&'a Expr),

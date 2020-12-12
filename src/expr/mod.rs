@@ -6,6 +6,7 @@ pub use rnix::SmolStr;
 
 pub use self::expr_ref::{ExprRef, ExprRefKind};
 
+pub mod builtins;
 pub mod expr_ref;
 pub mod lower;
 
@@ -41,6 +42,7 @@ pub enum Expr {
         lhs: ExprRef,
         rhs: ExprRef,
     },
+    Builtin(builtins::Builtin),
     IfElse {
         condition: ExprRef,
         then_body: ExprRef,

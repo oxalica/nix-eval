@@ -106,6 +106,9 @@ impl Lowerer {
             }
             .into());
         }
+        if let Some(e) = crate::expr::builtins::GLOBAL_BUILTIN_EXPRS.get(name) {
+            return Ok(e.clone());
+        }
         Err(Error::UndefinedVariable {
             name: name.into(),
             pos: n.node().text_range(),

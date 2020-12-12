@@ -1,6 +1,82 @@
-Err(
-    UndefinedVariable {
-        name: "true",
-        pos: [27; 31),
-    },
+Ok(
+    Expr(
+        List {
+            items: [
+                Expr(
+                    Literal(
+                        Bool(
+                            true,
+                        ),
+                    ),
+                ),
+                Expr(
+                    Literal(
+                        Bool(
+                            false,
+                        ),
+                    ),
+                ),
+                Expr(
+                    Builtin(
+                        Abort,
+                    ),
+                ),
+                Expr(
+                    Builtin(
+                        BaseNameOf,
+                    ),
+                ),
+                Expr(
+                    Builtin(
+                        Builtins,
+                    ),
+                ),
+                Expr(
+                    Builtin(
+                        Derivation,
+                    ),
+                ),
+                Expr(
+                    Builtin(
+                        DirOf,
+                    ),
+                ),
+                Expr(
+                    Builtin(
+                        FetchTarball,
+                    ),
+                ),
+                Expr(
+                    Builtin(
+                        Import,
+                    ),
+                ),
+                Expr(
+                    Builtin(
+                        IsNull,
+                    ),
+                ),
+                Expr(
+                    Builtin(
+                        Map,
+                    ),
+                ),
+                Expr(
+                    Builtin(
+                        RemoveAttrs,
+                    ),
+                ),
+                Expr(
+                    Builtin(
+                        Throw,
+                    ),
+                ),
+                Expr(
+                    Builtin(
+                        ToString,
+                    ),
+                ),
+            ],
+        },
+    ),
 )

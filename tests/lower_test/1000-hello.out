@@ -1,6 +1,325 @@
-Err(
-    UndefinedVariable {
-        name: "true",
-        pos: [254; 258),
-    },
+Ok(
+    Expr(
+        Lambda {
+            arg: ClosePattern {
+                required_names: [
+                    "stdenv",
+                    "fetchurl",
+                ],
+                optional_names: {},
+            },
+            body: Expr(
+                LetIn {
+                    exprs: [
+                        Expr(
+                            Select {
+                                set: Debruijn(
+                                    2,
+                                ),
+                                index: Expr(
+                                    Literal(
+                                        String(
+                                            "stdenv",
+                                        ),
+                                    ),
+                                ),
+                                or_default: None,
+                            },
+                        ),
+                        Expr(
+                            Select {
+                                set: Debruijn(
+                                    2,
+                                ),
+                                index: Expr(
+                                    Literal(
+                                        String(
+                                            "fetchurl",
+                                        ),
+                                    ),
+                                ),
+                                or_default: None,
+                            },
+                        ),
+                    ],
+                    body: Expr(
+                        Apply {
+                            lambda: Expr(
+                                Select {
+                                    set: Debruijn(
+                                        1,
+                                    ),
+                                    index: Expr(
+                                        Literal(
+                                            String(
+                                                "mkDerivation",
+                                            ),
+                                        ),
+                                    ),
+                                    or_default: None,
+                                },
+                            ),
+                            value: Expr(
+                                LetIn {
+                                    exprs: [
+                                        Expr(
+                                            Literal(
+                                                Bool(
+                                                    true,
+                                                ),
+                                            ),
+                                        ),
+                                        Expr(
+                                            LetIn {
+                                                exprs: [
+                                                    Expr(
+                                                        Select {
+                                                            set: Debruijn(
+                                                                7,
+                                                            ),
+                                                            index: Expr(
+                                                                Literal(
+                                                                    String(
+                                                                        "lib",
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                            or_default: None,
+                                                        },
+                                                    ),
+                                                ],
+                                                body: Expr(
+                                                    AttrSet {
+                                                        entries: {
+                                                            "changelog": Expr(
+                                                                Str {
+                                                                    parts: [
+                                                                        Literal(
+                                                                            "https://git.savannah.gnu.org/cgit/hello.git/plain/NEWS?h=v",
+                                                                        ),
+                                                                        Expr(
+                                                                            Debruijn(
+                                                                                1,
+                                                                            ),
+                                                                        ),
+                                                                    ],
+                                                                },
+                                                            ),
+                                                            "description": Expr(
+                                                                Str {
+                                                                    parts: [
+                                                                        Literal(
+                                                                            "A program that produces a familiar, friendly greeting",
+                                                                        ),
+                                                                    ],
+                                                                },
+                                                            ),
+                                                            "homepage": Expr(
+                                                                Str {
+                                                                    parts: [
+                                                                        Literal(
+                                                                            "https://www.gnu.org/software/hello/manual/",
+                                                                        ),
+                                                                    ],
+                                                                },
+                                                            ),
+                                                            "license": Expr(
+                                                                Select {
+                                                                    set: Expr(
+                                                                        Select {
+                                                                            set: Debruijn(
+                                                                                0,
+                                                                            ),
+                                                                            index: Expr(
+                                                                                Literal(
+                                                                                    String(
+                                                                                        "licenses",
+                                                                                    ),
+                                                                                ),
+                                                                            ),
+                                                                            or_default: None,
+                                                                        },
+                                                                    ),
+                                                                    index: Expr(
+                                                                        Literal(
+                                                                            String(
+                                                                                "gpl3Plus",
+                                                                            ),
+                                                                        ),
+                                                                    ),
+                                                                    or_default: None,
+                                                                },
+                                                            ),
+                                                            "longDescription": Expr(
+                                                                Str {
+                                                                    parts: [
+                                                                        Literal(
+                                                                            "GNU Hello is a program that prints ",
+                                                                        ),
+                                                                    ],
+                                                                },
+                                                            ),
+                                                            "maintainers": Expr(
+                                                                List {
+                                                                    items: [
+                                                                        Expr(
+                                                                            Select {
+                                                                                set: Expr(
+                                                                                    Select {
+                                                                                        set: Debruijn(
+                                                                                            0,
+                                                                                        ),
+                                                                                        index: Expr(
+                                                                                            Literal(
+                                                                                                String(
+                                                                                                    "maintainers",
+                                                                                                ),
+                                                                                            ),
+                                                                                        ),
+                                                                                        or_default: None,
+                                                                                    },
+                                                                                ),
+                                                                                index: Expr(
+                                                                                    Literal(
+                                                                                        String(
+                                                                                            "eelco",
+                                                                                        ),
+                                                                                    ),
+                                                                                ),
+                                                                                or_default: None,
+                                                                            },
+                                                                        ),
+                                                                    ],
+                                                                },
+                                                            ),
+                                                            "platforms": Expr(
+                                                                Select {
+                                                                    set: Expr(
+                                                                        Select {
+                                                                            set: Debruijn(
+                                                                                0,
+                                                                            ),
+                                                                            index: Expr(
+                                                                                Literal(
+                                                                                    String(
+                                                                                        "platforms",
+                                                                                    ),
+                                                                                ),
+                                                                            ),
+                                                                            or_default: None,
+                                                                        },
+                                                                    ),
+                                                                    index: Expr(
+                                                                        Literal(
+                                                                            String(
+                                                                                "all",
+                                                                            ),
+                                                                        ),
+                                                                    ),
+                                                                    or_default: None,
+                                                                },
+                                                            ),
+                                                        },
+                                                        dynamics: [],
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                        Expr(
+                                            Str {
+                                                parts: [
+                                                    Literal(
+                                                        "hello",
+                                                    ),
+                                                ],
+                                            },
+                                        ),
+                                        Expr(
+                                            Apply {
+                                                lambda: Debruijn(
+                                                    5,
+                                                ),
+                                                value: Expr(
+                                                    AttrSet {
+                                                        entries: {
+                                                            "sha256": Expr(
+                                                                Str {
+                                                                    parts: [
+                                                                        Literal(
+                                                                            "0ssi1wpaf7plaswqqjwigppsg5fyh99vdlb9kzl7c9lng89ndq1i",
+                                                                        ),
+                                                                    ],
+                                                                },
+                                                            ),
+                                                            "url": Expr(
+                                                                Str {
+                                                                    parts: [
+                                                                        Literal(
+                                                                            "mirror://gnu/hello/",
+                                                                        ),
+                                                                        Expr(
+                                                                            Debruijn(
+                                                                                2,
+                                                                            ),
+                                                                        ),
+                                                                        Literal(
+                                                                            "-",
+                                                                        ),
+                                                                        Expr(
+                                                                            Debruijn(
+                                                                                0,
+                                                                            ),
+                                                                        ),
+                                                                        Literal(
+                                                                            ".tar.gz",
+                                                                        ),
+                                                                    ],
+                                                                },
+                                                            ),
+                                                        },
+                                                        dynamics: [],
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                        Expr(
+                                            Str {
+                                                parts: [
+                                                    Literal(
+                                                        "2.10",
+                                                    ),
+                                                ],
+                                            },
+                                        ),
+                                    ],
+                                    body: Expr(
+                                        AttrSet {
+                                            entries: {
+                                                "doCheck": Debruijn(
+                                                    4,
+                                                ),
+                                                "meta": Debruijn(
+                                                    3,
+                                                ),
+                                                "pname": Debruijn(
+                                                    2,
+                                                ),
+                                                "src": Debruijn(
+                                                    1,
+                                                ),
+                                                "version": Debruijn(
+                                                    0,
+                                                ),
+                                            },
+                                            dynamics: [],
+                                        },
+                                    ),
+                                },
+                            ),
+                        },
+                    ),
+                },
+            ),
+        },
+    ),
 )
