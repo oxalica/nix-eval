@@ -1,4 +1,4 @@
-use crate::expr::*;
+use crate::expr::{Expr, ExprRef, LambdaArg, SmolStr, StrPart, Value};
 use rnix::types::{
     Dynamic, EntryHolder, Ident, Lambda, ParsedType, Pattern, Root, TokenWrapper as _,
     TypedNode as _, With, Wrapper as _,
