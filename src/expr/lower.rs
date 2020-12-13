@@ -1,10 +1,11 @@
-use crate::expr::{Expr, ExprRef, LambdaArg, SmolStr, StrPart, Value};
+use crate::expr::{Builtin, Expr, ExprRef, LambdaArg, SmolStr, StrPart, Value};
+use once_cell::sync::Lazy;
 use rnix::types::{
     Dynamic, EntryHolder, Ident, Lambda, ParsedType, Pattern, Root, TokenWrapper as _,
     TypedNode as _, With, Wrapper as _,
 };
 use rnix::{SyntaxKind, TextRange};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::convert::TryFrom;
 use std::fmt;
 
@@ -74,8 +75,22 @@ macro_rules! insert_or_dup {
     }};
 }
 
+static GLOBAL_BUILTINS: Lazy<HashMap<SmolStr, ExprRef>> = Lazy::new(|| {
+    let mut map = HashMap::new();
+    for &b in Builtin::GLOBALS {
+        let name = b.name().into();
+        let expr: ExprRef = Expr::Builtin(b).into();
+        map.insert(name, expr);
+    }
+    // Overwrite `true` and `false` to directly use literals.
+    map.insert("true".into(), Value::Bool(true).into());
+    map.insert("false".into(), Value::Bool(false).into());
+    map
+});
+
 impl Lowerer {
     fn new() -> Self {
+        Lazy::force(&GLOBAL_BUILTINS);
         Self {
             let_scopes: Vec::new(),
             with_scopes: Vec::new(),
@@ -106,7 +121,7 @@ impl Lowerer {
             }
             .into());
         }
-        if let Some(e) = crate::expr::builtins::GLOBAL_BUILTIN_EXPRS.get(name) {
+        if let Some(e) = GLOBAL_BUILTINS.get(name) {
             return Ok(e.clone());
         }
         Err(Error::UndefinedVariable {

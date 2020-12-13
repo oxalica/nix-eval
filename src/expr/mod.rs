@@ -4,6 +4,7 @@ pub use rnix::types::{BinOpKind, UnaryOpKind};
 pub use rnix::value::Anchor as PathAnchor;
 pub use rnix::SmolStr;
 
+pub use self::builtins::Builtin;
 pub use self::expr_ref::{ExprRef, ExprRefKind};
 
 pub mod builtins;
