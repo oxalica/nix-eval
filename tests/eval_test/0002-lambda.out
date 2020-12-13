@@ -1,0 +1,21 @@
+Ok(
+    AttrSet(
+        {
+            "a": Integer(
+                1,
+            ),
+            "b": Integer(
+                1,
+            ),
+            "c": Integer(
+                2,
+            ),
+            "d": Integer(
+                3,
+            ),
+            "e": Integer(
+                3628800,
+            ),
+        },
+    ),
+)

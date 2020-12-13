@@ -1,4 +1,4 @@
-use nix_eval::expr::lower::lower;
+use nix_eval::expr::{eval::Evaluator, lower::lower};
 use std::{env, fs, path::PathBuf};
 
 fn run_test(base_dir: &str, mut f: impl FnMut(String) -> String) {
@@ -43,4 +43,13 @@ fn run_test(base_dir: &str, mut f: impl FnMut(String) -> String) {
 #[test]
 fn lower_test() {
     run_test("tests/lower_test", |input| format!("{:#?}", lower(&input)))
+}
+
+#[test]
+fn eval_test() {
+    run_test("tests/eval_test", |input| {
+        let e = lower(&input).unwrap();
+        let eval = Evaluator::new();
+        format!("{:#?}", eval.eval_expr(&e, true))
+    })
 }

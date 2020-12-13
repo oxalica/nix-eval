@@ -34,7 +34,7 @@ impl ExprRef {
         }
     }
 
-    fn kind(&self) -> ExprRefKind<'_> {
+    pub fn kind(&self) -> ExprRefKind<'_> {
         match self.repr.get() & 0b11 {
             0b00 => ExprRefKind::Expr(unsafe { &*(self.repr.get() as *const Expr) }),
             0b01 => ExprRefKind::Debruijn(self.repr.get() >> 2),

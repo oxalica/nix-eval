@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.34"
+im = "15.0.0"
 once_cell = "1.5.2"
 rnix = "0.8.0"
 static_assertions = "1.1.0"

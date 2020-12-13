@@ -8,6 +8,7 @@ pub use self::builtins::Builtin;
 pub use self::expr_ref::{ExprRef, ExprRefKind};
 
 pub mod builtins;
+pub mod eval;
 pub mod expr_ref;
 pub mod lower;
 
@@ -15,7 +16,7 @@ pub mod lower;
 static_assertions::assert_eq_size!(Value, [u8; 32]);
 static_assertions::assert_eq_size!(Expr, [u8; 64]);
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Bool(bool),
     Float(f64),

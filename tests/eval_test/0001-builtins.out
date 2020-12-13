@@ -1,0 +1,121 @@
+Ok(
+    AttrSet(
+        {
+            "arith": List(
+                [
+                    Integer(
+                        55,
+                    ),
+                    Integer(
+                        29,
+                    ),
+                    Integer(
+                        546,
+                    ),
+                    Integer(
+                        3,
+                    ),
+                    Bool(
+                        true,
+                    ),
+                    Bool(
+                        false,
+                    ),
+                ],
+            ),
+            "builtins": List(
+                [
+                    Bool(
+                        true,
+                    ),
+                    Bool(
+                        false,
+                    ),
+                    Bool(
+                        true,
+                    ),
+                    Bool(
+                        false,
+                    ),
+                ],
+            ),
+            "eq": List(
+                [
+                    Bool(
+                        true,
+                    ),
+                    Bool(
+                        false,
+                    ),
+                    Bool(
+                        true,
+                    ),
+                    Bool(
+                        true,
+                    ),
+                    Bool(
+                        false,
+                    ),
+                    Bool(
+                        true,
+                    ),
+                    Bool(
+                        true,
+                    ),
+                    Bool(
+                        false,
+                    ),
+                ],
+            ),
+            "tryEval": List(
+                [
+                    AttrSet(
+                        {
+                            "success": Bool(
+                                true,
+                            ),
+                            "value": Integer(
+                                42,
+                            ),
+                        },
+                    ),
+                    AttrSet(
+                        {
+                            "success": Bool(
+                                false,
+                            ),
+                            "value": Bool(
+                                false,
+                            ),
+                        },
+                    ),
+                ],
+            ),
+            "typeOf": List(
+                [
+                    String(
+                        "bool",
+                    ),
+                    String(
+                        "int",
+                    ),
+                    String(
+                        "float",
+                    ),
+                    String(
+                        "set",
+                    ),
+                    String(
+                        "list",
+                    ),
+                    String(
+                        "list",
+                    ),
+                    String(
+                        "list",
+                    ),
+                ],
+            ),
+        },
+    ),
+)
