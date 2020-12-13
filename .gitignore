@@ -1,3 +1,5 @@
 /target
 /.vscode
 *.failed
+perf.data*
+*.svg
