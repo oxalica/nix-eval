@@ -106,22 +106,18 @@ Ok(
                                                                 },
                                                             ),
                                                             "description": Expr(
-                                                                Str {
-                                                                    parts: [
-                                                                        Literal(
-                                                                            "A program that produces a familiar, friendly greeting",
-                                                                        ),
-                                                                    ],
-                                                                },
+                                                                Literal(
+                                                                    String(
+                                                                        "A program that produces a familiar, friendly greeting",
+                                                                    ),
+                                                                ),
                                                             ),
                                                             "homepage": Expr(
-                                                                Str {
-                                                                    parts: [
-                                                                        Literal(
-                                                                            "https://www.gnu.org/software/hello/manual/",
-                                                                        ),
-                                                                    ],
-                                                                },
+                                                                Literal(
+                                                                    String(
+                                                                        "https://www.gnu.org/software/hello/manual/",
+                                                                    ),
+                                                                ),
                                                             ),
                                                             "license": Expr(
                                                                 Select {
@@ -151,13 +147,11 @@ Ok(
                                                                 },
                                                             ),
                                                             "longDescription": Expr(
-                                                                Str {
-                                                                    parts: [
-                                                                        Literal(
-                                                                            "GNU Hello is a program that prints ",
-                                                                        ),
-                                                                    ],
-                                                                },
+                                                                Literal(
+                                                                    String(
+                                                                        "GNU Hello is a program that prints ",
+                                                                    ),
+                                                                ),
                                                             ),
                                                             "maintainers": Expr(
                                                                 List {
@@ -226,13 +220,11 @@ Ok(
                                             },
                                         ),
                                         Expr(
-                                            Str {
-                                                parts: [
-                                                    Literal(
-                                                        "hello",
-                                                    ),
-                                                ],
-                                            },
+                                            Literal(
+                                                String(
+                                                    "hello",
+                                                ),
+                                            ),
                                         ),
                                         Expr(
                                             Apply {
@@ -243,13 +235,11 @@ Ok(
                                                     AttrSet {
                                                         entries: {
                                                             "sha256": Expr(
-                                                                Str {
-                                                                    parts: [
-                                                                        Literal(
-                                                                            "0ssi1wpaf7plaswqqjwigppsg5fyh99vdlb9kzl7c9lng89ndq1i",
-                                                                        ),
-                                                                    ],
-                                                                },
+                                                                Literal(
+                                                                    String(
+                                                                        "0ssi1wpaf7plaswqqjwigppsg5fyh99vdlb9kzl7c9lng89ndq1i",
+                                                                    ),
+                                                                ),
                                                             ),
                                                             "url": Expr(
                                                                 Str {
@@ -283,13 +273,11 @@ Ok(
                                             },
                                         ),
                                         Expr(
-                                            Str {
-                                                parts: [
-                                                    Literal(
-                                                        "2.10",
-                                                    ),
-                                                ],
-                                            },
+                                            Literal(
+                                                String(
+                                                    "2.10",
+                                                ),
+                                            ),
                                         ),
                                     ],
                                     body: Expr(

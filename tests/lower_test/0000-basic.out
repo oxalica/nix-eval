@@ -13,22 +13,18 @@ Ok(
                                     BinOp {
                                         operator: Add,
                                         lhs: Expr(
-                                            Str {
-                                                parts: [
-                                                    Literal(
-                                                        "hello",
-                                                    ),
-                                                ],
-                                            },
+                                            Literal(
+                                                String(
+                                                    "hello",
+                                                ),
+                                            ),
                                         ),
                                         rhs: Expr(
-                                            Str {
-                                                parts: [
-                                                    Literal(
-                                                        "world",
-                                                    ),
-                                                ],
-                                            },
+                                            Literal(
+                                                String(
+                                                    "world",
+                                                ),
+                                            ),
                                         ),
                                     },
                                 ),
@@ -107,20 +103,37 @@ Ok(
                                             ),
                                         ),
                                     ),
-                                    or_default: None,
+                                    or_default: Some(
+                                        Expr(
+                                            Select {
+                                                set: Expr(
+                                                    AttrSet {
+                                                        entries: {},
+                                                        dynamics: [],
+                                                    },
+                                                ),
+                                                index: Expr(
+                                                    Literal(
+                                                        String(
+                                                            "c",
+                                                        ),
+                                                    ),
+                                                ),
+                                                or_default: None,
+                                            },
+                                        ),
+                                    ),
                                 },
                             ),
                         ),
                     },
                 ),
                 "hello": Expr(
-                    Str {
-                        parts: [
-                            Literal(
-                                "world",
-                            ),
-                        ],
-                    },
+                    Literal(
+                        String(
+                            "world",
+                        ),
+                    ),
                 ),
                 "paths": Expr(
                     List {

@@ -108,13 +108,11 @@ Ok(
                                 ),
                             ),
                             Expr(
-                                Str {
-                                    parts: [
-                                        Literal(
-                                            "2",
-                                        ),
-                                    ],
-                                },
+                                Literal(
+                                    String(
+                                        "2",
+                                    ),
+                                ),
                             ),
                         ],
                         body: Expr(
@@ -133,13 +131,11 @@ Ok(
                                             BinOp {
                                                 operator: Add,
                                                 lhs: Expr(
-                                                    Str {
-                                                        parts: [
-                                                            Literal(
-                                                                "a",
-                                                            ),
-                                                        ],
-                                                    },
+                                                    Literal(
+                                                        String(
+                                                            "a",
+                                                        ),
+                                                    ),
                                                 ),
                                                 rhs: Debruijn(
                                                     0,

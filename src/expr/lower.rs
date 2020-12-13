@@ -1,4 +1,4 @@
-use crate::expr::{Builtin, Expr, ExprRef, LambdaArg, SmolStr, StrPart, Value};
+use crate::expr::{Builtin, Expr, ExprRef, ExprRefKind, LambdaArg, SmolStr, StrPart, Value};
 use once_cell::sync::Lazy;
 use rnix::types::{
     Dynamic, EntryHolder, Ident, Lambda, ParsedType, Pattern, Root, TokenWrapper as _,
@@ -64,12 +64,15 @@ struct Lowerer {
 struct StackIdx(usize);
 
 macro_rules! insert_or_dup {
-    ($map:expr, $k:expr, $v:expr, $node:expr) => {{
+    ($map:expr, $k:expr, $v:expr, $node:expr) => {
+        insert_or_dup!($map, $k, $v, raw@ $node.node())
+    };
+    ($map:expr, $k:expr, $v:expr, raw@ $node:expr) => {{
         let name: SmolStr = $k;
         if $map.insert(name.clone(), $v).is_some() {
             return Err(Error::DuplicatedName {
                 name,
-                pos: $node.node().text_range(),
+                pos: $node.text_range(),
             });
         }
     }};
@@ -191,21 +194,30 @@ impl Lowerer {
             ParsedType::Paren(n) => return self.expr(n.inner().unwrap()),
             ParsedType::AttrSet(n) if n.recursive() => return self.rec_attr_set_like(&n, None),
             ParsedType::AttrSet(n) => return self.attr_set(&n),
-            ParsedType::Str(n) => Expr::Str {
-                parts: n
-                    .parts()
-                    .into_iter()
-                    .map(|part| match part {
-                        rnix::value::StrPart::Literal(s) => Ok(StrPart::Literal(s.into())),
-                        rnix::value::StrPart::Ast(n) => {
-                            // FIXME: NODE_STRING_INTERPOL is not a Wrapper?
-                            assert_eq!(n.kind(), SyntaxKind::NODE_STRING_INTERPOL);
-                            let inner = n.first_child().unwrap();
-                            Ok(StrPart::Expr(self.expr(inner)?))
-                        }
-                    })
-                    .collect::<Result<_>>()?,
-            },
+            ParsedType::Str(n) => {
+                let mut parts = n.parts();
+                if parts.len() == 1 && matches!(&parts[0], rnix::value::StrPart::Literal(_)) {
+                    match parts.pop().unwrap() {
+                        rnix::value::StrPart::Literal(s) => Expr::Literal(Value::String(s.into())),
+                        _ => unreachable!(),
+                    }
+                } else {
+                    Expr::Str {
+                        parts: parts
+                            .into_iter()
+                            .map(|part| match part {
+                                rnix::value::StrPart::Literal(s) => Ok(StrPart::Literal(s.into())),
+                                rnix::value::StrPart::Ast(n) => {
+                                    // FIXME: NODE_STRING_INTERPOL is not a Wrapper?
+                                    assert_eq!(n.kind(), SyntaxKind::NODE_STRING_INTERPOL);
+                                    let inner = n.first_child().unwrap();
+                                    Ok(StrPart::Expr(self.expr(inner)?))
+                                }
+                            })
+                            .collect::<Result<_>>()?,
+                    }
+                }
+            }
             ParsedType::UnaryOp(n) => Expr::UnaryOp {
                 operator: n.operator(),
                 value: self.expr(n.value().unwrap())?,
@@ -243,6 +255,7 @@ impl Lowerer {
                 let n = Dynamic::cast(n).unwrap();
                 self.expr(n.inner().unwrap())
             }
+            SyntaxKind::NODE_STRING => self.expr(n),
             k => unreachable!("Unexpected node kind {:?} at {}", k, n.text_range()),
         }
     }
@@ -591,17 +604,17 @@ impl AttrSetLit {
         allow_dynamic: bool,
     ) -> Result<()> {
         let (n, rest_path) = path.split_first().unwrap();
-        match n.kind() {
-            SyntaxKind::NODE_IDENT => {
-                let n = Ident::cast(n.clone()).unwrap();
-                let name: SmolStr = n.as_str().into();
+        let key_expr = lower.index(n.clone())?;
+        match key_expr.kind() {
+            ExprRefKind::Expr(Expr::Literal(Value::String(name))) => {
+                let name: SmolStr = name.clone();
                 if rest_path.is_empty() {
-                    insert_or_dup!(self.entries, name, AttrSetLitValue::Expr(value), n);
+                    insert_or_dup!(self.entries, name, AttrSetLitValue::Expr(value), raw@n);
                     Ok(())
                 } else {
                     match self
                         .entries
-                        .entry(name.clone())
+                        .entry(name)
                         .or_insert_with(|| AttrSetLitValue::Deep(Default::default()))
                     {
                         AttrSetLitValue::Deep(deep) => {
@@ -611,14 +624,13 @@ impl AttrSetLit {
                     }
                 }
             }
-            SyntaxKind::NODE_DYNAMIC => {
+            _ => {
                 if !allow_dynamic {
                     return Err(Error::UnexpectedDynamicAttr {
                         pos: n.text_range(),
                     });
                 }
 
-                let expr = lower.expr(Dynamic::cast(n.clone()).unwrap().inner().unwrap())?;
                 let deep = if rest_path.is_empty() {
                     AttrSetLitValue::Expr(value)
                 } else {
@@ -626,10 +638,9 @@ impl AttrSetLit {
                     set.insert_path(rest_path, value, lower, true)?;
                     AttrSetLitValue::Deep(set)
                 };
-                self.dynamics.push((expr, deep));
+                self.dynamics.push((key_expr, deep));
                 Ok(())
             }
-            _ => unreachable!(),
         }
     }
 }
