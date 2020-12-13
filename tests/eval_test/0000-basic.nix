@@ -1,6 +1,6 @@
 {
   hello = "world";
-  paths = [ <nix> ./nix /nix http://nix ];
+  paths = [ <nixpkgs> /* ./nix not implemented */ /nix http://nix ];
   cond = if 0 == 0 then 42 else 4.2;
   foo = {}.a or { b = 42; }.b;
   buildPhase = ''

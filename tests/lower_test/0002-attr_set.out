@@ -10,7 +10,7 @@ Ok(
                                     entries: {
                                         "a": Expr(
                                             Literal(
-                                                Integer(
+                                                Int(
                                                     1,
                                                 ),
                                             ),
@@ -20,14 +20,14 @@ Ok(
                                                 entries: {
                                                     "c": Expr(
                                                         Literal(
-                                                            Integer(
+                                                            Int(
                                                                 2,
                                                             ),
                                                         ),
                                                     ),
                                                     "d": Expr(
                                                         Literal(
-                                                            Integer(
+                                                            Int(
                                                                 3,
                                                             ),
                                                         ),
@@ -58,7 +58,7 @@ Ok(
                                                 entries: {
                                                     "c": Expr(
                                                         Literal(
-                                                            Integer(
+                                                            Int(
                                                                 2,
                                                             ),
                                                         ),
@@ -76,7 +76,7 @@ Ok(
                             ),
                             Expr(
                                 Literal(
-                                    Integer(
+                                    Int(
                                         42,
                                     ),
                                 ),
@@ -102,7 +102,7 @@ Ok(
                         exprs: [
                             Expr(
                                 Literal(
-                                    Integer(
+                                    Int(
                                         1,
                                     ),
                                 ),

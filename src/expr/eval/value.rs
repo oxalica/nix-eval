@@ -3,8 +3,11 @@ use crate::expr::{
     Builtin, ExprRef, SmolStr,
 };
 use std::cell::UnsafeCell;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
+use std::fmt;
 use std::sync::Arc;
+
+const VALUE_DUMP_INDENT: usize = 2;
 
 #[derive(Clone)]
 pub enum Value {
@@ -67,6 +70,83 @@ impl Value {
             Self::List(v) => Ok(v),
             _ => Err(self.expecting("list")),
         }
+    }
+
+    pub fn dump(&self) -> impl fmt::Display + '_ {
+        struct Wrapper<'a>(&'a Value);
+        impl<'a> fmt::Display for Wrapper<'a> {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                self.0.dump_inner(f, 0, &mut HashSet::new())
+            }
+        }
+        Wrapper(self)
+    }
+
+    fn dump_inner(
+        &self,
+        f: &mut fmt::Formatter,
+        mut indent: usize,
+        visited: &mut HashSet<*const Value>,
+    ) -> fmt::Result {
+        fn is_nix_ident_key(s: &str) -> bool {
+            !s.is_empty()
+                && s.as_bytes()[0].is_ascii_alphabetic()
+                && s.bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b"_-'".contains(&b))
+        }
+
+        if !visited.insert(self) {
+            return f.write_str("<CYCLE>");
+        }
+
+        match self {
+            Self::Bool(v) => fmt::Debug::fmt(v, f)?,
+            Self::Float(v) => fmt::Debug::fmt(v, f)?,
+            Self::Int(v) => fmt::Debug::fmt(v, f)?,
+            Self::String(v) => fmt::Debug::fmt(v, f)?,
+            Self::Path(v) => fmt::Debug::fmt(v, f)?,
+
+            Self::Lambda(_, _) => f.write_str("<LAMBDA>")?,
+            Self::PartialBuiltin(b, args) => write!(f, "<LABMDA.{:?}.{}>", b, args.len())?,
+            Self::AttrSet(set) => {
+                if set.is_empty() {
+                    f.write_str("{ }")?
+                } else {
+                    f.write_str("{\n")?;
+                    indent += VALUE_DUMP_INDENT;
+                    for (k, v) in set {
+                        write!(f, "{:indent$}", "", indent = indent)?;
+                        if is_nix_ident_key(k) {
+                            write!(f, "{} = ", k)?;
+                        } else {
+                            write!(f, "{:?} = ", k)?;
+                        }
+                        v.dump_inner(f, indent, visited)?;
+                        write!(f, ";\n")?;
+                    }
+                    indent -= VALUE_DUMP_INDENT;
+                    write!(f, "{:indent$}}}", "", indent = indent)?;
+                }
+            }
+            Self::List(xs) => {
+                if xs.is_empty() {
+                    f.write_str("[ ]")?
+                } else {
+                    f.write_str("[\n")?;
+                    indent += VALUE_DUMP_INDENT;
+                    for v in xs {
+                        write!(f, "{:indent$}", "", indent = indent)?;
+                        v.dump_inner(f, indent, visited)?;
+                        write!(f, "\n")?;
+                    }
+                    indent -= VALUE_DUMP_INDENT;
+                    write!(f, "{:indent$}]", "", indent = indent)?;
+                }
+            }
+        }
+
+        visited.remove(&(self as *const _));
+        Ok(())
     }
 }
 
@@ -136,5 +216,28 @@ impl Thunk {
 
     pub fn eval_deep(&self, eval: &Evaluator) -> Result<&Value> {
         self.eval_with(|expr, stack| eval.eval_deep(expr, stack))
+    }
+
+    pub fn dump(&self) -> impl fmt::Display + '_ {
+        struct Wrapper<'a>(&'a Thunk);
+        impl<'a> fmt::Display for Wrapper<'a> {
+            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                self.0.dump_inner(f, 0, &mut HashSet::new())
+            }
+        }
+        Wrapper(self)
+    }
+
+    fn dump_inner(
+        &self,
+        f: &mut fmt::Formatter,
+        indent: usize,
+        visited: &mut HashSet<*const Value>,
+    ) -> fmt::Result {
+        match unsafe { &*self.inner.get() } {
+            ThunkState::Lazy(..) | ThunkState::Evaluating => f.write_str("<CODE>"),
+            ThunkState::Done(Err(_)) => f.write_str("<ERROR>"),
+            ThunkState::Done(Ok(v)) => v.dump_inner(f, indent, visited),
+        }
     }
 }

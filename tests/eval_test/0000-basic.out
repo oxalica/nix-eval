@@ -1,37 +1,11 @@
-Ok(
-    AttrSet(
-        {
-            "buildPhase": String(
-                "echo helloworld",
-            ),
-            "cond": Integer(
-                42,
-            ),
-            "foo": Integer(
-                42,
-            ),
-            "hello": String(
-                "world",
-            ),
-            "paths": List(
-                [
-                    Path(
-                        Store,
-                        "nix",
-                    ),
-                    Path(
-                        Relative,
-                        "./nix",
-                    ),
-                    Path(
-                        Absolute,
-                        "/nix",
-                    ),
-                    String(
-                        "http://nix",
-                    ),
-                ],
-            ),
-        },
-    ),
-)
+{
+  buildPhase = "echo helloworld";
+  cond = 42;
+  foo = 42;
+  hello = "world";
+  paths = [
+    "/path/to/nixpkgs"
+    "/nix"
+    "http://nix"
+  ];
+}

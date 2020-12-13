@@ -272,7 +272,7 @@ Ok(
                                             or_default: Some(
                                                 Expr(
                                                     Literal(
-                                                        Integer(
+                                                        Int(
                                                             1,
                                                         ),
                                                     ),

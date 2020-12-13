@@ -47,9 +47,12 @@ fn lower_test() {
 
 #[test]
 fn eval_test() {
+    let eval = Evaluator::new(vec![("nixpkgs".into(), "/path/to/nixpkgs".into())]);
     run_test("tests/eval_test", |input| {
         let e = lower(&input).unwrap();
-        let eval = Evaluator::new();
-        format!("{:#?}", eval.eval_expr(&e, true))
+        match eval.eval_expr(&e, true) {
+            Ok(v) => v.dump().to_string(),
+            Err(err) => format!("{:#?}", err),
+        }
     })
 }

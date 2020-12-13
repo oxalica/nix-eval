@@ -54,7 +54,7 @@ Ok(
                                     entries: {
                                         "a": Expr(
                                             Literal(
-                                                Integer(
+                                                Int(
                                                     1,
                                                 ),
                                             ),

@@ -1,21 +1,7 @@
-Ok(
-    AttrSet(
-        {
-            "a": Integer(
-                1,
-            ),
-            "b": Integer(
-                1,
-            ),
-            "c": Integer(
-                2,
-            ),
-            "d": Integer(
-                3,
-            ),
-            "e": Integer(
-                3628800,
-            ),
-        },
-    ),
-)
+{
+  a = 1;
+  b = 1;
+  c = 2;
+  d = 3;
+  e = 3628800;
+}

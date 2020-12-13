@@ -42,14 +42,14 @@ Ok(
                                 operator: Equal,
                                 lhs: Expr(
                                     Literal(
-                                        Integer(
+                                        Int(
                                             0,
                                         ),
                                     ),
                                 ),
                                 rhs: Expr(
                                     Literal(
-                                        Integer(
+                                        Int(
                                             0,
                                         ),
                                     ),
@@ -58,7 +58,7 @@ Ok(
                         ),
                         then_body: Expr(
                             Literal(
-                                Integer(
+                                Int(
                                     42,
                                 ),
                             ),
