@@ -1,9 +1,9 @@
-use super::{CValue, Error, Evaluator, Result, SmolStr, Thunk, Value};
+use super::{Error, Evaluator, Result, SmolStr, Thunk, Value};
 use crate::expr::Builtin;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-pub fn invoke(e: &Evaluator, b: Builtin, args: &[Arc<Thunk>]) -> Result<CValue> {
+pub fn invoke(e: &Evaluator, b: Builtin, args: &[Arc<Thunk>]) -> Result<Value> {
     let err = Err(Error::BuiltinNotImplemented { builtin: b });
     let f = match b {
         Builtin::Abort => abort,
@@ -28,7 +28,7 @@ pub fn invoke(e: &Evaluator, b: Builtin, args: &[Arc<Thunk>]) -> Result<CValue> 
         Builtin::Div => div,
         Builtin::Elem => return err,
         Builtin::ElemAt => return err,
-        Builtin::False => return Ok(CValue::Simple(Value::Bool(false))),
+        Builtin::False => return Ok(Value::Bool(false)),
         Builtin::FetchGit => return err,
         Builtin::FetchTarball => return err,
         Builtin::Fetchurl => return err,
@@ -84,7 +84,7 @@ pub fn invoke(e: &Evaluator, b: Builtin, args: &[Arc<Thunk>]) -> Result<CValue> 
         Builtin::ToString => return err,
         Builtin::ToXML => return err,
         Builtin::Trace => return err,
-        Builtin::True => return Ok(CValue::Simple(Value::Bool(true))),
+        Builtin::True => return Ok(Value::Bool(true)),
         Builtin::TryEval => try_eval,
         Builtin::TypeOf => type_of,
     };
@@ -100,23 +100,15 @@ enum ArithArgs {
 fn _arith_args(
     operation: &'static str,
     allow_str: bool,
-    a: &CValue,
-    b: &CValue,
+    a: &Value,
+    b: &Value,
 ) -> Result<ArithArgs> {
     Ok(match (a, b) {
-        (CValue::Simple(Value::Integer(a)), CValue::Simple(Value::Integer(b))) => {
-            ArithArgs::Int(*a, *b)
-        }
-        (CValue::Simple(Value::Float(a)), CValue::Simple(Value::Integer(b))) => {
-            ArithArgs::Float(*a, *b as f64)
-        }
-        (CValue::Simple(Value::Integer(a)), CValue::Simple(Value::Float(b))) => {
-            ArithArgs::Float(*a as f64, *b)
-        }
-        (CValue::Simple(Value::Float(a)), CValue::Simple(Value::Float(b))) => {
-            ArithArgs::Float(*a, *b)
-        }
-        (CValue::Simple(Value::String(a)), CValue::Simple(Value::String(b))) if allow_str => {
+        (Value::Int(a), Value::Int(b)) => ArithArgs::Int(*a, *b),
+        (Value::Float(a), Value::Int(b)) => ArithArgs::Float(*a, *b as f64),
+        (Value::Int(a), Value::Float(b)) => ArithArgs::Float(*a as f64, *b),
+        (Value::Float(a), Value::Float(b)) => ArithArgs::Float(*a, *b),
+        (Value::String(a), Value::String(b)) if allow_str => {
             ArithArgs::String(a.clone(), b.clone())
         }
         _ => {
@@ -129,28 +121,26 @@ fn _arith_args(
     })
 }
 
-pub fn _arith_op(op: Builtin, a: &CValue, b: &CValue) -> Result<CValue> {
-    let v = match op {
+pub fn _arith_op(op: Builtin, a: &Value, b: &Value) -> Result<Value> {
+    Ok(match op {
         Builtin::Add => match _arith_args("add", true, a, b)? {
-            ArithArgs::Int(a, b) => Value::Integer(a.wrapping_add(b)),
+            ArithArgs::Int(a, b) => Value::Int(a.wrapping_add(b)),
             ArithArgs::Float(a, b) => Value::Float(a + b),
             ArithArgs::String(a, b) => Value::String((a.to_string() + &*b).into()),
         },
         Builtin::Sub => match _arith_args("subtract", false, a, b)? {
-            ArithArgs::Int(a, b) => Value::Integer(a.wrapping_sub(b)),
+            ArithArgs::Int(a, b) => Value::Int(a.wrapping_sub(b)),
             ArithArgs::Float(a, b) => Value::Float(a - b),
             _ => unreachable!(),
         },
         Builtin::Mul => match _arith_args("multiply", false, a, b)? {
-            ArithArgs::Int(a, b) => Value::Integer(a.wrapping_mul(b)),
+            ArithArgs::Int(a, b) => Value::Int(a.wrapping_mul(b)),
             ArithArgs::Float(a, b) => Value::Float(a * b),
             _ => unreachable!(),
         },
         Builtin::Div => match _arith_args("divide", false, a, b)? {
             ArithArgs::Int(_, b) if b == 0 => return Err(Error::DivisionByZero),
-            ArithArgs::Int(a, b) => {
-                Value::Integer(a.checked_div(b).ok_or(Error::DivisionOverflow)?)
-            }
+            ArithArgs::Int(a, b) => Value::Int(a.checked_div(b).ok_or(Error::DivisionOverflow)?),
             ArithArgs::Float(a, b) => Value::Float(a / b),
             _ => unreachable!(),
         },
@@ -160,61 +150,60 @@ pub fn _arith_op(op: Builtin, a: &CValue, b: &CValue) -> Result<CValue> {
             ArithArgs::String(a, b) => a < b,
         }),
         _ => unreachable!(),
-    };
-    Ok(CValue::Simple(v))
+    })
 }
 
-fn abort(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<CValue> {
+fn abort(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
     let v = args[0].eval(e)?;
     let reason = e.eval_coerce_to_string(v)?;
     Err(Error::Abort { reason })
 }
 
-fn add(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<CValue> {
+fn add(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
     _arith_op(Builtin::Add, args[0].eval(e)?, args[1].eval(e)?)
 }
 
-fn div(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<CValue> {
+fn div(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
     _arith_op(Builtin::Div, args[0].eval(e)?, args[1].eval(e)?)
 }
 
-fn less_than(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<CValue> {
+fn less_than(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
     _arith_op(Builtin::LessThan, args[0].eval(e)?, args[1].eval(e)?)
 }
 
-fn mul(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<CValue> {
+fn mul(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
     _arith_op(Builtin::Mul, args[0].eval(e)?, args[1].eval(e)?)
 }
 
-fn sub(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<CValue> {
+fn sub(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
     _arith_op(Builtin::Sub, args[0].eval(e)?, args[1].eval(e)?)
 }
 
-fn throw(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<CValue> {
+fn throw(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
     let reason = e.eval_coerce_to_string(args[0].eval(e)?)?;
     Err(Error::Throw { reason })
 }
 
-fn try_eval(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<CValue> {
+fn try_eval(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
     let mut set = BTreeMap::new();
     match args[0].eval(e) {
         Ok(_) => {
-            let t = Thunk::new_value(CValue::Simple(Value::Bool(true)));
+            let t = Thunk::new_value(Value::Bool(true));
             set.insert("success".into(), t);
             set.insert("value".into(), args[0].clone());
-            Ok(CValue::AttrSet(set))
+            Ok(Value::AttrSet(set))
         }
         Err(err) if err.is_soft_error() => {
-            let f = Thunk::new_value(CValue::Simple(Value::Bool(false)));
+            let f = Thunk::new_value(Value::Bool(false));
             set.insert("success".into(), f.clone());
             set.insert("value".into(), f);
-            Ok(CValue::AttrSet(set))
+            Ok(Value::AttrSet(set))
         }
         Err(err) => Err(err),
     }
 }
 
-fn type_of(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<CValue> {
+fn type_of(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
     let v = args[0].eval(e)?;
-    Ok(CValue::Simple(Value::String(v.type_name().into())))
+    Ok(Value::String(v.type_name().into()))
 }

@@ -1,4 +1,4 @@
-use crate::expr::{Builtin, Expr, ExprRef, ExprRefKind, LambdaArg, SmolStr, StrPart, Value};
+use crate::expr::{Builtin, Expr, ExprRef, ExprRefKind, LambdaArg, Literal, SmolStr, StrPart};
 use once_cell::sync::Lazy;
 use rnix::types::{
     Dynamic, EntryHolder, Ident, Lambda, ParsedType, Pattern, Root, TokenWrapper as _,
@@ -86,8 +86,8 @@ static GLOBAL_BUILTINS: Lazy<HashMap<SmolStr, ExprRef>> = Lazy::new(|| {
         map.insert(name, expr);
     }
     // Overwrite `true` and `false` to directly use literals.
-    map.insert("true".into(), Value::Bool(true).into());
-    map.insert("false".into(), Value::Bool(false).into());
+    map.insert("true".into(), Literal::Bool(true).into());
+    map.insert("false".into(), Literal::Bool(false).into());
     map
 });
 
@@ -119,7 +119,7 @@ impl Lowerer {
         if let Some(&idx) = self.with_scopes.last() {
             return Ok(Expr::Select {
                 set: self.to_debruijn(idx),
-                index: Value::String(name.into()).into(),
+                index: Literal::String(name.into()).into(),
                 or_default: None,
             }
             .into());
@@ -171,7 +171,7 @@ impl Lowerer {
             // `(rec { ...; body = ...; }).body`
             ParsedType::LegacyLet(n) => Expr::Select {
                 set: self.rec_attr_set_like(&n, None)?,
-                index: Value::String("body".into()).into(),
+                index: Literal::String("body".into()).into(),
                 or_default: None,
             },
             ParsedType::LetIn(n) => return self.rec_attr_set_like(&n, Some(n.body().unwrap())),
@@ -198,7 +198,9 @@ impl Lowerer {
                 let mut parts = n.parts();
                 if parts.len() == 1 && matches!(&parts[0], rnix::value::StrPart::Literal(_)) {
                     match parts.pop().unwrap() {
-                        rnix::value::StrPart::Literal(s) => Expr::Literal(Value::String(s.into())),
+                        rnix::value::StrPart::Literal(s) => {
+                            Expr::Literal(Literal::String(s.into()))
+                        }
                         _ => unreachable!(),
                     }
                 } else {
@@ -223,10 +225,10 @@ impl Lowerer {
                 value: self.expr(n.value().unwrap())?,
             },
             ParsedType::Value(n) => Expr::Literal(match n.to_value().unwrap() {
-                rnix::NixValue::Float(v) => Value::Float(v),
-                rnix::NixValue::Integer(v) => Value::Integer(v),
-                rnix::NixValue::String(v) => Value::String(v.into()),
-                rnix::NixValue::Path(anchor, path) => Value::Path(anchor, path.into()),
+                rnix::NixValue::Float(v) => Literal::Float(v),
+                rnix::NixValue::Integer(v) => Literal::Int(v),
+                rnix::NixValue::String(v) => Literal::String(v.into()),
+                rnix::NixValue::Path(anchor, path) => Literal::Path(anchor, path.into()),
             }),
             ParsedType::With(n) => return self.with(n),
             ParsedType::Key(_)
@@ -249,7 +251,7 @@ impl Lowerer {
         match n.kind() {
             SyntaxKind::NODE_IDENT => {
                 let n = Ident::cast(n).unwrap();
-                Ok(Value::String(n.as_str().into()).into())
+                Ok(Literal::String(n.as_str().into()).into())
             }
             SyntaxKind::NODE_DYNAMIC => {
                 let n = Dynamic::cast(n).unwrap();
@@ -299,7 +301,7 @@ impl Lowerer {
                 let mut let_exprs = Vec::new();
                 for ent in arg.entries() {
                     let name: SmolStr = ent.name().unwrap().as_str().into();
-                    let index = Value::String(name.clone()).into();
+                    let index = Literal::String(name.clone()).into();
                     let or_default = match ent.default() {
                         Some(default) => {
                             optional_names.insert(name.clone());
@@ -399,7 +401,7 @@ impl Lowerer {
                 let name: SmolStr = ident.as_str().into();
                 let e = Expr::Select {
                     set: ExprRef::debruijn(let_cnt - 1 - i),
-                    index: Value::String(name.clone()).into(),
+                    index: Literal::String(name.clone()).into(),
                     or_default: None,
                 }
                 .into();
@@ -503,7 +505,7 @@ impl Lowerer {
                     Expr::Select {
                         // `from` expression.
                         set: ExprRef::debruijn(let_cnt - 1 - i),
-                        index: Value::String(name.clone()).into(),
+                        index: Literal::String(name.clone()).into(),
                         or_default: None,
                     }
                     .into(),
@@ -606,7 +608,7 @@ impl AttrSetLit {
         let (n, rest_path) = path.split_first().unwrap();
         let key_expr = lower.index(n.clone())?;
         match key_expr.kind() {
-            ExprRefKind::Expr(Expr::Literal(Value::String(name))) => {
+            ExprRefKind::Expr(Expr::Literal(Literal::String(name))) => {
                 let name: SmolStr = name.clone();
                 if rest_path.is_empty() {
                     insert_or_dup!(self.entries, name, AttrSetLitValue::Expr(value), raw@n);

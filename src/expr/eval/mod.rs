@@ -1,14 +1,15 @@
 use crate::expr::{
-    builtins::Builtin, expr_ref::ExprRefKind, BinOpKind, Expr, ExprRef, LambdaArg, SmolStr,
-    StrPart, UnaryOpKind, Value,
+    builtins::Builtin, expr_ref::ExprRefKind, BinOpKind, Expr, ExprRef, LambdaArg, Literal,
+    PathAnchor, SmolStr, StrPart, UnaryOpKind,
 };
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::path::PathBuf;
 use std::sync::Arc;
 
 mod builtins;
-mod thunk;
+mod value;
 
-pub use self::thunk::{CValue, Thunk};
+pub use self::value::{Thunk, Value};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -62,31 +63,34 @@ impl Error {
 // FIXME: Cyclic reference.
 type Stack = im::Vector<Arc<Thunk>>;
 
-#[derive(Debug)]
 pub struct Evaluator {
     builtins: Arc<Thunk>,
+    nix_paths: HashMap<SmolStr, PathBuf>,
 }
 
 impl Evaluator {
-    pub fn new() -> Self {
+    pub fn new(nix_paths: impl IntoIterator<Item = (SmolStr, PathBuf)>) -> Self {
         let builtins = Thunk::new_value_cyclic(|this| {
             let mut set = BTreeMap::new();
             for &b in Builtin::ALL {
                 let value = match b {
                     // Special cased 0-argument builtins.
-                    Builtin::True => Thunk::new_value(CValue::Simple(Value::Bool(true))),
-                    Builtin::False => Thunk::new_value(CValue::Simple(Value::Bool(false))),
+                    Builtin::True => Thunk::new_value(Value::Bool(true)),
+                    Builtin::False => Thunk::new_value(Value::Bool(false)),
                     Builtin::Builtins => this.clone(),
-                    b => Thunk::new_value(CValue::PartialBuiltin(b, Vec::new())),
+                    b => Thunk::new_value(Value::PartialBuiltin(b, Vec::new())),
                 };
                 set.insert(b.name().into(), value);
             }
-            CValue::AttrSet(set)
+            Value::AttrSet(set)
         });
-        Evaluator { builtins }
+        Evaluator {
+            builtins,
+            nix_paths: nix_paths.into_iter().collect(),
+        }
     }
 
-    pub fn eval_expr(&self, expr: &ExprRef, deep: bool) -> Result<CValue> {
+    pub fn eval_expr(&self, expr: &ExprRef, deep: bool) -> Result<Value> {
         if deep {
             self.eval_deep(expr, &Stack::new())
         } else {
@@ -94,25 +98,31 @@ impl Evaluator {
         }
     }
 
-    fn eval_deep(&self, expr: &ExprRef, stack: &Stack) -> Result<CValue> {
+    fn eval_deep(&self, expr: &ExprRef, stack: &Stack) -> Result<Value> {
         let v = self.eval(expr, stack)?;
         match &v {
-            CValue::Simple(_) | CValue::Lambda(..) | CValue::PartialBuiltin(..) => {}
-            CValue::AttrSet(set) => {
+            Value::AttrSet(set) => {
                 for thunk in set.values() {
                     thunk.eval_deep(self)?;
                 }
             }
-            CValue::List(xs) => {
+            Value::List(xs) => {
                 for thunk in xs {
                     thunk.eval_deep(self)?;
                 }
             }
+            Value::Bool(_)
+            | Value::Float(_)
+            | Value::Int(_)
+            | Value::String(_)
+            | Value::Path(_)
+            | Value::Lambda(..)
+            | Value::PartialBuiltin(..) => {}
         }
         Ok(v)
     }
 
-    fn eval(&self, expr: &ExprRef, stack: &Stack) -> Result<CValue> {
+    fn eval(&self, expr: &ExprRef, stack: &Stack) -> Result<Value> {
         let e = match expr.kind() {
             ExprRefKind::Debruijn(idx) => {
                 // FIXME: No clone.
@@ -125,13 +135,13 @@ impl Evaluator {
             Expr::Apply { lambda, value } => {
                 let lam = self.eval(lambda, stack)?;
                 let argument = Thunk::new_lazy(value.clone(), stack.clone());
-                if let CValue::PartialBuiltin(b, mut args) = lam {
+                if let Value::PartialBuiltin(b, mut args) = lam {
                     assert!(args.len() < b.params());
                     args.push(argument);
                     if b.params() == args.len() {
                         builtins::invoke(self, b, &args)
                     } else {
-                        Ok(CValue::PartialBuiltin(b, args))
+                        Ok(Value::PartialBuiltin(b, args))
                     }
                 } else {
                     let (lam_expr, lam_stack) = lam.as_lambda()?;
@@ -192,14 +202,14 @@ impl Evaluator {
                     let key = self.eval_coerce_to_string(&self.eval(key, stack)?)?;
                     set.insert(key, Thunk::new_lazy(value.clone(), stack.clone()));
                 }
-                Ok(CValue::AttrSet(set))
+                Ok(Value::AttrSet(set))
             }
             Expr::BinOp { operator, lhs, rhs } => self.eval_binop(*operator, lhs, rhs, stack),
             &Expr::Builtin(b) => {
                 if b.params() == 0 {
                     builtins::invoke(self, b, &[])
                 } else {
-                    Ok(CValue::PartialBuiltin(b, Vec::new()))
+                    Ok(Value::PartialBuiltin(b, Vec::new()))
                 }
             }
             Expr::IfElse {
@@ -210,7 +220,7 @@ impl Evaluator {
                 let cond = self.eval(condition, stack)?.as_bool()?;
                 self.eval(if cond { then_body } else { else_body }, stack)
             }
-            Expr::Lambda { .. } => Ok(CValue::Lambda(expr.clone(), stack.clone())),
+            Expr::Lambda { .. } => Ok(Value::Lambda(expr.clone(), stack.clone())),
             Expr::LetIn { exprs, body } => {
                 let mut stack = stack.clone();
                 for e in exprs.iter() {
@@ -227,9 +237,36 @@ impl Evaluator {
                     .iter()
                     .map(|e| Thunk::new_lazy(e.clone(), stack.clone()))
                     .collect();
-                Ok(CValue::List(list))
+                Ok(Value::List(list))
             }
-            Expr::Literal(v) => Ok(CValue::Simple(v.clone())),
+            Expr::Literal(lit) => Ok(match lit {
+                &Literal::Bool(x) => Value::Bool(x),
+                &Literal::Float(x) => Value::Float(x),
+                &Literal::Int(x) => Value::Int(x),
+                Literal::String(x) => Value::String(x.clone()),
+                Literal::Path(anchor, p) => Value::Path(match anchor {
+                    PathAnchor::Absolute => p.clone(),
+                    PathAnchor::Relative => {
+                        todo!()
+                    }
+                    PathAnchor::Home => {
+                        todo!()
+                    }
+                    PathAnchor::Store => {
+                        if let Some(path) = self.nix_paths.get(&*p) {
+                            path.to_str().unwrap().into()
+                        } else {
+                            return Err(Error::Throw {
+                                reason: format!(
+                                    "file {:?} was not found in the Nix search path",
+                                    p
+                                )
+                                .into(),
+                            });
+                        }
+                    }
+                }),
+            }),
             Expr::Select {
                 set,
                 index,
@@ -256,16 +293,16 @@ impl Evaluator {
                         }
                     }
                 }
-                Ok(CValue::Simple(Value::String(buf.into())))
+                Ok(Value::String(buf.into()))
             }
             Expr::UnaryOp { operator, value } => {
                 let mut v = self.eval(value, stack)?;
                 match operator {
-                    UnaryOpKind::Invert => Ok(CValue::Simple(Value::Bool(!v.as_bool()?))),
+                    UnaryOpKind::Invert => Ok(Value::Bool(!v.as_bool()?)),
                     UnaryOpKind::Negate => {
                         match &mut v {
-                            CValue::Simple(Value::Integer(x)) => *x = x.wrapping_neg(),
-                            CValue::Simple(Value::Float(x)) => *x = -*x,
+                            Value::Int(x) => *x = x.wrapping_neg(),
+                            Value::Float(x) => *x = -*x,
                             _ => return Err(v.expecting("int or float")),
                         }
                         Ok(v)
@@ -281,13 +318,13 @@ impl Evaluator {
         lhs: &ExprRef,
         rhs: &ExprRef,
         stack: &Stack,
-    ) -> Result<CValue> {
+    ) -> Result<Value> {
         let lhs = self.eval(lhs, stack)?;
         let rhs = || self.eval(rhs, stack);
         Ok(match op {
             BinOpKind::Concat => {
                 let rhs = rhs()?;
-                CValue::List(
+                Value::List(
                     lhs.as_list()?
                         .iter()
                         .chain(rhs.as_list()?.iter())
@@ -298,7 +335,7 @@ impl Evaluator {
             BinOpKind::IsSet => {
                 let lhs = lhs.as_attr_set()?;
                 let rhs = self.eval_coerce_to_string(&rhs()?)?;
-                CValue::Simple(Value::Bool(lhs.contains_key(&*rhs)))
+                Value::Bool(lhs.contains_key(&*rhs))
             }
             BinOpKind::Update => {
                 let mut set = lhs.as_attr_set()?.clone();
@@ -306,15 +343,15 @@ impl Evaluator {
                 for (k, v) in rhs.as_attr_set()? {
                     set.insert(k.clone(), v.clone());
                 }
-                CValue::AttrSet(set)
+                Value::AttrSet(set)
             }
             BinOpKind::Equal => {
                 let v = self.eval_equal(&lhs, &rhs()?)?;
-                CValue::Simple(Value::Bool(v))
+                Value::Bool(v)
             }
             BinOpKind::NotEqual => {
                 let v = self.eval_equal(&lhs, &rhs()?)?;
-                CValue::Simple(Value::Bool(!v))
+                Value::Bool(!v)
             }
             BinOpKind::Add => builtins::_arith_op(Builtin::Add, &lhs, &rhs()?)?,
             BinOpKind::Sub => builtins::_arith_op(Builtin::Sub, &lhs, &rhs()?)?,
@@ -322,34 +359,37 @@ impl Evaluator {
             BinOpKind::Div => builtins::_arith_op(Builtin::Div, &lhs, &rhs()?)?,
             BinOpKind::And => {
                 let v = lhs.as_bool()? && rhs()?.as_bool()?;
-                CValue::Simple(Value::Bool(v))
+                Value::Bool(v)
             }
             BinOpKind::Or => {
                 let v = lhs.as_bool()? || rhs()?.as_bool()?;
-                CValue::Simple(Value::Bool(v))
+                Value::Bool(v)
             }
             BinOpKind::Implication => {
                 let v = !lhs.as_bool()? || rhs()?.as_bool()?;
-                CValue::Simple(Value::Bool(v))
+                Value::Bool(v)
             }
             BinOpKind::Less => builtins::_arith_op(Builtin::LessThan, &lhs, &rhs()?)?,
             BinOpKind::More => builtins::_arith_op(Builtin::LessThan, &rhs()?, &lhs)?,
             BinOpKind::LessOrEq => {
                 let b = builtins::_arith_op(Builtin::LessThan, &rhs()?, &lhs)?.as_bool()?;
-                CValue::Simple(Value::Bool(!b))
+                Value::Bool(!b)
             }
             BinOpKind::MoreOrEq => {
                 let b = builtins::_arith_op(Builtin::LessThan, &lhs, &rhs()?)?.as_bool()?;
-                CValue::Simple(Value::Bool(!b))
+                Value::Bool(!b)
             }
         })
     }
 
-    fn eval_equal(&self, lhs: &CValue, rhs: &CValue) -> Result<bool> {
-        match (lhs, rhs) {
-            (CValue::Simple(a), CValue::Simple(b)) => Ok(a == b),
-            (CValue::Lambda(..), CValue::Lambda(..)) => Ok(false),
-            (CValue::AttrSet(a), CValue::AttrSet(b)) if a.keys().eq(b.keys()) => {
+    fn eval_equal(&self, lhs: &Value, rhs: &Value) -> Result<bool> {
+        Ok(match (lhs, rhs) {
+            (Value::Bool(a), Value::Bool(b)) => a == b,
+            (Value::Float(a), Value::Float(b)) => a == b,
+            (Value::Int(a), Value::Int(b)) => a == b,
+            (Value::String(a), Value::String(b)) | (Value::Path(a), Value::Path(b)) => a == b,
+            (Value::Lambda(..), Value::Lambda(..)) => false,
+            (Value::AttrSet(a), Value::AttrSet(b)) if a.keys().eq(b.keys()) => {
                 if a.keys().eq(b.keys()) {
                     for (a, b) in a.values().zip(b.values()) {
                         let a = a.eval(self)?;
@@ -358,26 +398,26 @@ impl Evaluator {
                             return Ok(false);
                         }
                     }
-                    Ok(true)
+                    true
                 } else {
-                    Ok(false)
+                    false
                 }
             }
-            (CValue::List(a), CValue::List(b)) if a.len() == b.len() => {
+            (Value::List(a), Value::List(b)) if a.len() == b.len() => {
                 for (a, b) in a.iter().zip(b) {
                     if !self.eval_equal(a.eval(self)?, b.eval(self)?)? {
                         return Ok(false);
                     }
                 }
-                Ok(true)
+                true
             }
-            _ => Ok(false),
-        }
+            _ => false,
+        })
     }
 
-    fn eval_coerce_to_string(&self, value: &CValue) -> Result<SmolStr> {
+    fn eval_coerce_to_string(&self, value: &Value) -> Result<SmolStr> {
         match value {
-            CValue::Simple(Value::String(s)) => Ok(s.clone()),
+            Value::String(s) => Ok(s.clone()),
             // FIXME: Path to store path.
             // FIXME: Derivation to store path.
             _ => Err(Error::CannotCoerceToString {

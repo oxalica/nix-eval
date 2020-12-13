@@ -1,4 +1,4 @@
-use crate::expr::{Expr, SmolStr, Value};
+use crate::expr::{Expr, Literal, SmolStr};
 use std::fmt;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
@@ -90,14 +90,14 @@ impl From<Expr> for ExprRef {
     }
 }
 
-impl From<Value> for ExprRef {
-    fn from(v: Value) -> Self {
+impl From<Literal> for ExprRef {
+    fn from(v: Literal) -> Self {
         Self::new(Expr::Literal(v))
     }
 }
 
 impl From<SmolStr> for ExprRef {
     fn from(s: SmolStr) -> Self {
-        Self::new(Expr::Literal(Value::String(s)))
+        Self::new(Expr::Literal(Literal::String(s)))
     }
 }

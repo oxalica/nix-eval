@@ -13,14 +13,14 @@ pub mod expr_ref;
 pub mod lower;
 
 // FIXME: Optimize memory cost.
-static_assertions::assert_eq_size!(Value, [u8; 32]);
+static_assertions::assert_eq_size!(Literal, [u8; 32]);
 static_assertions::assert_eq_size!(Expr, [u8; 64]);
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Value {
+pub enum Literal {
     Bool(bool),
     Float(f64),
-    Integer(i64),
+    Int(i64),
     String(SmolStr),
     Path(PathAnchor, SmolStr),
 }
@@ -61,7 +61,7 @@ pub enum Expr {
     List {
         items: Box<[ExprRef]>,
     },
-    Literal(Value),
+    Literal(Literal),
     Select {
         set: ExprRef,
         index: ExprRef,
