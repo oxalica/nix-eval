@@ -1,10 +1,10 @@
-use crate::expr::{Builtin, Expr, ExprRef, ExprRefKind, LambdaArg, Literal, SmolStr, StrPart};
+use crate::expr::{Builtin, Expr, ExprRef, ExprRefKind, LambdaArg, Literal, SmolStr};
 use once_cell::sync::Lazy;
 use rnix::types::{
-    Dynamic, EntryHolder, Ident, Lambda, ParsedType, Pattern, Root, TokenWrapper as _,
-    TypedNode as _, With, Wrapper as _,
+    BinOpKind, Dynamic, EntryHolder, Ident, Lambda, ParsedType, Pattern, Root, TokenWrapper as _,
+    TypedNode as _, UnaryOpKind, With, Wrapper as _,
 };
-use rnix::{SyntaxKind, TextRange};
+use rnix::{StrPart, SyntaxKind, TextRange};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::convert::TryFrom;
 use std::fmt;
@@ -109,6 +109,18 @@ impl Lowerer {
         StackIdx(self.stack_depth + offset)
     }
 
+    fn builtin(&mut self, b: Builtin, args: &[ExprRef]) -> Result<ExprRef> {
+        let mut expr = Expr::Builtin(b).into();
+        for arg in args {
+            expr = Expr::Apply {
+                lambda: expr,
+                value: arg.clone(),
+            }
+            .into();
+        }
+        Ok(expr)
+    }
+
     fn lookup_scope(&mut self, n: &Ident) -> Result<ExprRef> {
         let name = n.as_str();
         for scope in self.let_scopes.iter().rev() {
@@ -117,12 +129,10 @@ impl Lowerer {
             }
         }
         if let Some(&idx) = self.with_scopes.last() {
-            return Ok(Expr::Select {
-                set: self.to_debruijn(idx),
-                index: Literal::String(name.into()).into(),
-                or_default: None,
-            }
-            .into());
+            return self.builtin(
+                Builtin::GetAttr,
+                &[Literal::String(name.into()).into(), self.to_debruijn(idx)],
+            );
         }
         if let Some(e) = GLOBAL_BUILTINS.get(name) {
             return Ok(e.clone());
@@ -151,79 +161,74 @@ impl Lowerer {
                 lambda: self.expr(n.lambda().unwrap())?,
                 value: self.expr(n.value().unwrap())?,
             },
-            ParsedType::Assert(n) => Expr::Assert {
-                condition: self.expr(n.condition().unwrap())?,
-                body: self.expr(n.body().unwrap())?,
-            },
+            ParsedType::Assert(n) => {
+                let cond = self.expr(n.condition().unwrap())?;
+                let body = self.expr(n.body().unwrap())?;
+                return self.builtin(Builtin::_Assert, &[cond, body]);
+            }
             ParsedType::Ident(n) => return self.lookup_scope(&n),
-            ParsedType::IfElse(n) => Expr::IfElse {
-                condition: self.expr(n.condition().unwrap())?,
-                then_body: self.expr(n.body().unwrap())?,
-                else_body: self.expr(n.else_body().unwrap())?,
-            },
-            ParsedType::Select(n) => Expr::Select {
-                set: self.expr(n.set().unwrap())?,
-                index: self.index(n.index().unwrap())?,
-                or_default: None,
-            },
+            ParsedType::IfElse(n) => {
+                let cond = self.expr(n.condition().unwrap())?;
+                let then_body = self.expr(n.body().unwrap())?;
+                let else_body = self.expr(n.else_body().unwrap())?;
+                return self.builtin(Builtin::_IfThenElse, &[cond, then_body, else_body]);
+            }
+            ParsedType::Select(n) => {
+                let set = self.expr(n.set().unwrap())?;
+                let index = self.index(n.index().unwrap())?;
+                return self.select(set, index, None);
+            }
             ParsedType::Lambda(n) => return self.lambda(n),
             // `let { ...; body = ...; }` =>
             // `(rec { ...; body = ...; }).body`
-            ParsedType::LegacyLet(n) => Expr::Select {
-                set: self.rec_attr_set_like(&n, None)?,
-                index: Literal::String("body".into()).into(),
-                or_default: None,
-            },
+            ParsedType::LegacyLet(n) => {
+                let set = self.rec_attr_set_like(&n, None)?;
+                let index = Literal::String("body".into()).into();
+                return self.select(set, index, None);
+            }
             ParsedType::LetIn(n) => return self.rec_attr_set_like(&n, Some(n.body().unwrap())),
             ParsedType::List(n) => Expr::List {
                 items: n.items().map(|n| self.expr(n)).collect::<Result<_>>()?,
             },
-            ParsedType::BinOp(n) => Expr::BinOp {
-                operator: n.operator(),
-                lhs: self.expr(n.lhs().unwrap())?,
-                rhs: self.expr(n.rhs().unwrap())?,
-            },
+            ParsedType::BinOp(n) => {
+                let lhs = self.expr(n.lhs().unwrap())?;
+                let rhs = self.expr(n.rhs().unwrap())?;
+                return self.binary_op(n.operator(), lhs, rhs);
+            }
             ParsedType::OrDefault(n) => {
                 let s = n.index().unwrap();
-                Expr::Select {
-                    set: self.expr(s.set().unwrap())?,
-                    index: self.index(s.index().unwrap())?,
-                    or_default: Some(self.expr(n.default().unwrap())?),
-                }
+                let set = self.expr(s.set().unwrap())?;
+                let index = self.index(s.index().unwrap())?;
+                let or_default = self.expr(n.default().unwrap())?;
+                return self.builtin(Builtin::_SelectOrDefault, &[set, index, or_default]);
             }
             ParsedType::Paren(n) => return self.expr(n.inner().unwrap()),
             ParsedType::AttrSet(n) if n.recursive() => return self.rec_attr_set_like(&n, None),
             ParsedType::AttrSet(n) => return self.attr_set(&n),
             ParsedType::Str(n) => {
-                let mut parts = n.parts();
-                if parts.len() == 1 && matches!(&parts[0], rnix::value::StrPart::Literal(_)) {
-                    match parts.pop().unwrap() {
-                        rnix::value::StrPart::Literal(s) => {
-                            Expr::Literal(Literal::String(s.into()))
+                let mut ret = None;
+                for part in n.parts() {
+                    let cur = match part {
+                        StrPart::Literal(s) if s.is_empty() => continue,
+                        StrPart::Literal(s) => Literal::String(s.into()).into(),
+                        StrPart::Ast(n) => {
+                            // FIXME: NODE_STRING_INTERPOL is not a Wrapper?
+                            assert_eq!(n.kind(), SyntaxKind::NODE_STRING_INTERPOL);
+                            let inner = n.first_child().unwrap();
+                            self.expr(inner)?
                         }
-                        _ => unreachable!(),
-                    }
-                } else {
-                    Expr::Str {
-                        parts: parts
-                            .into_iter()
-                            .map(|part| match part {
-                                rnix::value::StrPart::Literal(s) => Ok(StrPart::Literal(s.into())),
-                                rnix::value::StrPart::Ast(n) => {
-                                    // FIXME: NODE_STRING_INTERPOL is not a Wrapper?
-                                    assert_eq!(n.kind(), SyntaxKind::NODE_STRING_INTERPOL);
-                                    let inner = n.first_child().unwrap();
-                                    Ok(StrPart::Expr(self.expr(inner)?))
-                                }
-                            })
-                            .collect::<Result<_>>()?,
-                    }
+                    };
+                    ret = Some(match ret.take() {
+                        None => cur,
+                        Some(prev) => self.builtin(Builtin::_ConcatStr, &[prev, cur])?,
+                    });
                 }
+                return Ok(ret.unwrap_or_else(|| Literal::String(Default::default()).into()));
             }
-            ParsedType::UnaryOp(n) => Expr::UnaryOp {
-                operator: n.operator(),
-                value: self.expr(n.value().unwrap())?,
-            },
+            ParsedType::UnaryOp(n) => {
+                let value = self.expr(n.value().unwrap())?;
+                return self.unary_op(n.operator(), value);
+            }
             ParsedType::Value(n) => Expr::Literal(match n.to_value().unwrap() {
                 rnix::NixValue::Float(v) => Literal::Float(v),
                 rnix::NixValue::Integer(v) => Literal::Int(v),
@@ -259,6 +264,63 @@ impl Lowerer {
             }
             SyntaxKind::NODE_STRING => self.expr(n),
             k => unreachable!("Unexpected node kind {:?} at {}", k, n.text_range()),
+        }
+    }
+
+    fn binary_op(&mut self, op: BinOpKind, lhs: ExprRef, rhs: ExprRef) -> Result<ExprRef> {
+        let b = match op {
+            BinOpKind::Add => Builtin::Add,
+            BinOpKind::Sub => Builtin::Sub,
+            BinOpKind::Mul => Builtin::Mul,
+            BinOpKind::Div => Builtin::Div,
+            BinOpKind::And => Builtin::_And,
+            BinOpKind::Equal => Builtin::_Equal,
+            BinOpKind::Or => Builtin::_Or,
+            BinOpKind::Concat => Builtin::_Concat,
+            BinOpKind::Update => Builtin::_Update,
+            BinOpKind::Less => Builtin::LessThan,
+
+            BinOpKind::IsSet => {
+                return self.builtin(Builtin::HasAttr, &[rhs, lhs]);
+            }
+            BinOpKind::Implication => {
+                let not_lhs = self.builtin(Builtin::_Not, &[lhs])?;
+                return self.builtin(Builtin::_Or, &[not_lhs, rhs]);
+            }
+            BinOpKind::NotEqual => {
+                let ret = self.builtin(Builtin::_Equal, &[lhs, rhs])?;
+                return self.builtin(Builtin::_Not, &[ret]);
+            }
+            BinOpKind::More => return self.builtin(Builtin::LessThan, &[rhs, lhs]),
+            BinOpKind::LessOrEq => {
+                let ret = self.builtin(Builtin::LessThan, &[rhs, lhs])?;
+                return self.builtin(Builtin::_Not, &[ret]);
+            }
+            BinOpKind::MoreOrEq => {
+                let ret = self.builtin(Builtin::LessThan, &[lhs, rhs])?;
+                return self.builtin(Builtin::_Not, &[ret]);
+            }
+        };
+        self.builtin(b, &[lhs, rhs])
+    }
+
+    fn unary_op(&mut self, op: UnaryOpKind, value: ExprRef) -> Result<ExprRef> {
+        let b = match op {
+            UnaryOpKind::Invert => Builtin::_Not,
+            UnaryOpKind::Negate => Builtin::_Negate,
+        };
+        self.builtin(b, &[value])
+    }
+
+    fn select(
+        &mut self,
+        set: ExprRef,
+        index: ExprRef,
+        or_default: Option<ExprRef>,
+    ) -> Result<ExprRef> {
+        match or_default {
+            None => self.builtin(Builtin::GetAttr, &[index, set]),
+            Some(or_default) => self.builtin(Builtin::_SelectOrDefault, &[set, index, or_default]),
         }
     }
 
@@ -312,13 +374,9 @@ impl Lowerer {
                             None
                         }
                     };
-                    let select = Expr::Select {
-                        // Lambda argument.
-                        set: ExprRef::debruijn(let_cnt),
-                        index,
-                        or_default,
-                    }
-                    .into();
+                    // Lambda argument.
+                    let set = ExprRef::debruijn(let_cnt);
+                    let select = self.select(set, index, or_default)?;
                     let_exprs.push(select);
                 }
 
@@ -399,13 +457,10 @@ impl Lowerer {
         for (i, inherit) in n.inherits().filter(|n| n.from().is_some()).enumerate() {
             for ident in inherit.idents() {
                 let name: SmolStr = ident.as_str().into();
-                let e = Expr::Select {
-                    set: ExprRef::debruijn(let_cnt - 1 - i),
-                    index: Literal::String(name.clone()).into(),
-                    or_default: None,
-                }
-                .into();
-                insert_or_dup!(set_entries, name, e, ident);
+                let set = ExprRef::debruijn(let_cnt - 1 - i);
+                let index = Literal::String(name.clone()).into();
+                let select = self.select(set, index, None)?;
+                insert_or_dup!(set_entries, name, select, ident);
             }
         }
 
@@ -501,15 +556,11 @@ impl Lowerer {
             for ident in inherit.idents() {
                 let name: SmolStr = ident.as_str().into();
                 let stack_idx = ExprRef::debruijn(let_cnt - 1 - let_exprs.len());
-                let_exprs.push(
-                    Expr::Select {
-                        // `from` expression.
-                        set: ExprRef::debruijn(let_cnt - 1 - i),
-                        index: Literal::String(name.clone()).into(),
-                        or_default: None,
-                    }
-                    .into(),
-                );
+                // `from` expression.
+                let set = ExprRef::debruijn(let_cnt - 1 - i);
+                let index = Literal::String(name.clone()).into();
+                let select = self.select(set, index, None)?;
+                let_exprs.push(select);
                 // In LetIn, just get them from stack to avoid re-evaluation.
                 insert_or_dup!(set_entries, name, stack_idx, ident);
             }

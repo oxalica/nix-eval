@@ -9,18 +9,26 @@ Ok(
                         LetIn {
                             exprs: [
                                 Expr(
-                                    Select {
-                                        set: Debruijn(
+                                    Apply {
+                                        lambda: Expr(
+                                            Apply {
+                                                lambda: Expr(
+                                                    Builtin(
+                                                        GetAttr,
+                                                    ),
+                                                ),
+                                                value: Expr(
+                                                    Literal(
+                                                        String(
+                                                            "a",
+                                                        ),
+                                                    ),
+                                                ),
+                                            },
+                                        ),
+                                        value: Debruijn(
                                             1,
                                         ),
-                                        index: Expr(
-                                            Literal(
-                                                String(
-                                                    "a",
-                                                ),
-                                            ),
-                                        ),
-                                        or_default: None,
                                     },
                                 ),
                             ],
@@ -34,18 +42,26 @@ Ok(
                                             1,
                                         ),
                                         Expr(
-                                            Select {
-                                                set: Debruijn(
+                                            Apply {
+                                                lambda: Expr(
+                                                    Apply {
+                                                        lambda: Expr(
+                                                            Builtin(
+                                                                GetAttr,
+                                                            ),
+                                                        ),
+                                                        value: Expr(
+                                                            Literal(
+                                                                String(
+                                                                    "foo",
+                                                                ),
+                                                            ),
+                                                        ),
+                                                    },
+                                                ),
+                                                value: Debruijn(
                                                     0,
                                                 ),
-                                                index: Expr(
-                                                    Literal(
-                                                        String(
-                                                            "foo",
-                                                        ),
-                                                    ),
-                                                ),
-                                                or_default: None,
                                             },
                                         ),
                                         Expr(
@@ -68,18 +84,26 @@ Ok(
                                                                         1,
                                                                     ),
                                                                     Expr(
-                                                                        Select {
-                                                                            set: Debruijn(
+                                                                        Apply {
+                                                                            lambda: Expr(
+                                                                                Apply {
+                                                                                    lambda: Expr(
+                                                                                        Builtin(
+                                                                                            GetAttr,
+                                                                                        ),
+                                                                                    ),
+                                                                                    value: Expr(
+                                                                                        Literal(
+                                                                                            String(
+                                                                                                "bar",
+                                                                                            ),
+                                                                                        ),
+                                                                                    ),
+                                                                                },
+                                                                            ),
+                                                                            value: Debruijn(
                                                                                 0,
                                                                             ),
-                                                                            index: Expr(
-                                                                                Literal(
-                                                                                    String(
-                                                                                        "bar",
-                                                                                    ),
-                                                                                ),
-                                                                            ),
-                                                                            or_default: None,
                                                                         },
                                                                     ),
                                                                 ],
@@ -96,18 +120,26 @@ Ok(
                                                     LetIn {
                                                         exprs: [
                                                             Expr(
-                                                                Select {
-                                                                    set: Debruijn(
+                                                                Apply {
+                                                                    lambda: Expr(
+                                                                        Apply {
+                                                                            lambda: Expr(
+                                                                                Builtin(
+                                                                                    GetAttr,
+                                                                                ),
+                                                                            ),
+                                                                            value: Expr(
+                                                                                Literal(
+                                                                                    String(
+                                                                                        "fox",
+                                                                                    ),
+                                                                                ),
+                                                                            ),
+                                                                        },
+                                                                    ),
+                                                                    value: Debruijn(
                                                                         2,
                                                                     ),
-                                                                    index: Expr(
-                                                                        Literal(
-                                                                            String(
-                                                                                "fox",
-                                                                            ),
-                                                                        ),
-                                                                    ),
-                                                                    or_default: None,
                                                                 },
                                                             ),
                                                         ],
@@ -118,33 +150,49 @@ Ok(
                                                                         4,
                                                                     ),
                                                                     Expr(
-                                                                        Select {
-                                                                            set: Debruijn(
+                                                                        Apply {
+                                                                            lambda: Expr(
+                                                                                Apply {
+                                                                                    lambda: Expr(
+                                                                                        Builtin(
+                                                                                            GetAttr,
+                                                                                        ),
+                                                                                    ),
+                                                                                    value: Expr(
+                                                                                        Literal(
+                                                                                            String(
+                                                                                                "x",
+                                                                                            ),
+                                                                                        ),
+                                                                                    ),
+                                                                                },
+                                                                            ),
+                                                                            value: Debruijn(
                                                                                 0,
                                                                             ),
-                                                                            index: Expr(
-                                                                                Literal(
-                                                                                    String(
-                                                                                        "x",
-                                                                                    ),
-                                                                                ),
-                                                                            ),
-                                                                            or_default: None,
                                                                         },
                                                                     ),
                                                                     Expr(
-                                                                        Select {
-                                                                            set: Debruijn(
+                                                                        Apply {
+                                                                            lambda: Expr(
+                                                                                Apply {
+                                                                                    lambda: Expr(
+                                                                                        Builtin(
+                                                                                            GetAttr,
+                                                                                        ),
+                                                                                    ),
+                                                                                    value: Expr(
+                                                                                        Literal(
+                                                                                            String(
+                                                                                                "fog",
+                                                                                            ),
+                                                                                        ),
+                                                                                    ),
+                                                                                },
+                                                                            ),
+                                                                            value: Debruijn(
                                                                                 0,
                                                                             ),
-                                                                            index: Expr(
-                                                                                Literal(
-                                                                                    String(
-                                                                                        "fog",
-                                                                                    ),
-                                                                                ),
-                                                                            ),
-                                                                            or_default: None,
                                                                         },
                                                                     ),
                                                                 ],

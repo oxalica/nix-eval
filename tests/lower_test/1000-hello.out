@@ -12,51 +12,75 @@ Ok(
                 LetIn {
                     exprs: [
                         Expr(
-                            Select {
-                                set: Debruijn(
+                            Apply {
+                                lambda: Expr(
+                                    Apply {
+                                        lambda: Expr(
+                                            Builtin(
+                                                GetAttr,
+                                            ),
+                                        ),
+                                        value: Expr(
+                                            Literal(
+                                                String(
+                                                    "stdenv",
+                                                ),
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                value: Debruijn(
                                     2,
                                 ),
-                                index: Expr(
-                                    Literal(
-                                        String(
-                                            "stdenv",
-                                        ),
-                                    ),
-                                ),
-                                or_default: None,
                             },
                         ),
                         Expr(
-                            Select {
-                                set: Debruijn(
+                            Apply {
+                                lambda: Expr(
+                                    Apply {
+                                        lambda: Expr(
+                                            Builtin(
+                                                GetAttr,
+                                            ),
+                                        ),
+                                        value: Expr(
+                                            Literal(
+                                                String(
+                                                    "fetchurl",
+                                                ),
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                value: Debruijn(
                                     2,
                                 ),
-                                index: Expr(
-                                    Literal(
-                                        String(
-                                            "fetchurl",
-                                        ),
-                                    ),
-                                ),
-                                or_default: None,
                             },
                         ),
                     ],
                     body: Expr(
                         Apply {
                             lambda: Expr(
-                                Select {
-                                    set: Debruijn(
+                                Apply {
+                                    lambda: Expr(
+                                        Apply {
+                                            lambda: Expr(
+                                                Builtin(
+                                                    GetAttr,
+                                                ),
+                                            ),
+                                            value: Expr(
+                                                Literal(
+                                                    String(
+                                                        "mkDerivation",
+                                                    ),
+                                                ),
+                                            ),
+                                        },
+                                    ),
+                                    value: Debruijn(
                                         1,
                                     ),
-                                    index: Expr(
-                                        Literal(
-                                            String(
-                                                "mkDerivation",
-                                            ),
-                                        ),
-                                    ),
-                                    or_default: None,
                                 },
                             ),
                             value: Expr(
@@ -73,18 +97,26 @@ Ok(
                                             LetIn {
                                                 exprs: [
                                                     Expr(
-                                                        Select {
-                                                            set: Debruijn(
+                                                        Apply {
+                                                            lambda: Expr(
+                                                                Apply {
+                                                                    lambda: Expr(
+                                                                        Builtin(
+                                                                            GetAttr,
+                                                                        ),
+                                                                    ),
+                                                                    value: Expr(
+                                                                        Literal(
+                                                                            String(
+                                                                                "lib",
+                                                                            ),
+                                                                        ),
+                                                                    ),
+                                                                },
+                                                            ),
+                                                            value: Debruijn(
                                                                 7,
                                                             ),
-                                                            index: Expr(
-                                                                Literal(
-                                                                    String(
-                                                                        "lib",
-                                                                    ),
-                                                                ),
-                                                            ),
-                                                            or_default: None,
                                                         },
                                                     ),
                                                 ],
@@ -92,17 +124,26 @@ Ok(
                                                     AttrSet {
                                                         entries: {
                                                             "changelog": Expr(
-                                                                Str {
-                                                                    parts: [
-                                                                        Literal(
-                                                                            "https://git.savannah.gnu.org/cgit/hello.git/plain/NEWS?h=v",
-                                                                        ),
-                                                                        Expr(
-                                                                            Debruijn(
-                                                                                1,
+                                                                Apply {
+                                                                    lambda: Expr(
+                                                                        Apply {
+                                                                            lambda: Expr(
+                                                                                Builtin(
+                                                                                    _ConcatStr,
+                                                                                ),
                                                                             ),
-                                                                        ),
-                                                                    ],
+                                                                            value: Expr(
+                                                                                Literal(
+                                                                                    String(
+                                                                                        "https://git.savannah.gnu.org/cgit/hello.git/plain/NEWS?h=v",
+                                                                                    ),
+                                                                                ),
+                                                                            ),
+                                                                        },
+                                                                    ),
+                                                                    value: Debruijn(
+                                                                        1,
+                                                                    ),
                                                                 },
                                                             ),
                                                             "description": Expr(
@@ -120,30 +161,46 @@ Ok(
                                                                 ),
                                                             ),
                                                             "license": Expr(
-                                                                Select {
-                                                                    set: Expr(
-                                                                        Select {
-                                                                            set: Debruijn(
-                                                                                0,
+                                                                Apply {
+                                                                    lambda: Expr(
+                                                                        Apply {
+                                                                            lambda: Expr(
+                                                                                Builtin(
+                                                                                    GetAttr,
+                                                                                ),
                                                                             ),
-                                                                            index: Expr(
+                                                                            value: Expr(
                                                                                 Literal(
                                                                                     String(
-                                                                                        "licenses",
+                                                                                        "gpl3Plus",
                                                                                     ),
                                                                                 ),
                                                                             ),
-                                                                            or_default: None,
                                                                         },
                                                                     ),
-                                                                    index: Expr(
-                                                                        Literal(
-                                                                            String(
-                                                                                "gpl3Plus",
+                                                                    value: Expr(
+                                                                        Apply {
+                                                                            lambda: Expr(
+                                                                                Apply {
+                                                                                    lambda: Expr(
+                                                                                        Builtin(
+                                                                                            GetAttr,
+                                                                                        ),
+                                                                                    ),
+                                                                                    value: Expr(
+                                                                                        Literal(
+                                                                                            String(
+                                                                                                "licenses",
+                                                                                            ),
+                                                                                        ),
+                                                                                    ),
+                                                                                },
                                                                             ),
-                                                                        ),
+                                                                            value: Debruijn(
+                                                                                0,
+                                                                            ),
+                                                                        },
                                                                     ),
-                                                                    or_default: None,
                                                                 },
                                                             ),
                                                             "longDescription": Expr(
@@ -157,60 +214,92 @@ Ok(
                                                                 List {
                                                                     items: [
                                                                         Expr(
-                                                                            Select {
-                                                                                set: Expr(
-                                                                                    Select {
-                                                                                        set: Debruijn(
-                                                                                            0,
+                                                                            Apply {
+                                                                                lambda: Expr(
+                                                                                    Apply {
+                                                                                        lambda: Expr(
+                                                                                            Builtin(
+                                                                                                GetAttr,
+                                                                                            ),
                                                                                         ),
-                                                                                        index: Expr(
+                                                                                        value: Expr(
                                                                                             Literal(
                                                                                                 String(
-                                                                                                    "maintainers",
+                                                                                                    "eelco",
                                                                                                 ),
                                                                                             ),
                                                                                         ),
-                                                                                        or_default: None,
                                                                                     },
                                                                                 ),
-                                                                                index: Expr(
-                                                                                    Literal(
-                                                                                        String(
-                                                                                            "eelco",
+                                                                                value: Expr(
+                                                                                    Apply {
+                                                                                        lambda: Expr(
+                                                                                            Apply {
+                                                                                                lambda: Expr(
+                                                                                                    Builtin(
+                                                                                                        GetAttr,
+                                                                                                    ),
+                                                                                                ),
+                                                                                                value: Expr(
+                                                                                                    Literal(
+                                                                                                        String(
+                                                                                                            "maintainers",
+                                                                                                        ),
+                                                                                                    ),
+                                                                                                ),
+                                                                                            },
                                                                                         ),
-                                                                                    ),
+                                                                                        value: Debruijn(
+                                                                                            0,
+                                                                                        ),
+                                                                                    },
                                                                                 ),
-                                                                                or_default: None,
                                                                             },
                                                                         ),
                                                                     ],
                                                                 },
                                                             ),
                                                             "platforms": Expr(
-                                                                Select {
-                                                                    set: Expr(
-                                                                        Select {
-                                                                            set: Debruijn(
-                                                                                0,
+                                                                Apply {
+                                                                    lambda: Expr(
+                                                                        Apply {
+                                                                            lambda: Expr(
+                                                                                Builtin(
+                                                                                    GetAttr,
+                                                                                ),
                                                                             ),
-                                                                            index: Expr(
+                                                                            value: Expr(
                                                                                 Literal(
                                                                                     String(
-                                                                                        "platforms",
+                                                                                        "all",
                                                                                     ),
                                                                                 ),
                                                                             ),
-                                                                            or_default: None,
                                                                         },
                                                                     ),
-                                                                    index: Expr(
-                                                                        Literal(
-                                                                            String(
-                                                                                "all",
+                                                                    value: Expr(
+                                                                        Apply {
+                                                                            lambda: Expr(
+                                                                                Apply {
+                                                                                    lambda: Expr(
+                                                                                        Builtin(
+                                                                                            GetAttr,
+                                                                                        ),
+                                                                                    ),
+                                                                                    value: Expr(
+                                                                                        Literal(
+                                                                                            String(
+                                                                                                "platforms",
+                                                                                            ),
+                                                                                        ),
+                                                                                    ),
+                                                                                },
                                                                             ),
-                                                                        ),
+                                                                            value: Debruijn(
+                                                                                0,
+                                                                            ),
+                                                                        },
                                                                     ),
-                                                                    or_default: None,
                                                                 },
                                                             ),
                                                         },
@@ -242,28 +331,82 @@ Ok(
                                                                 ),
                                                             ),
                                                             "url": Expr(
-                                                                Str {
-                                                                    parts: [
+                                                                Apply {
+                                                                    lambda: Expr(
+                                                                        Apply {
+                                                                            lambda: Expr(
+                                                                                Builtin(
+                                                                                    _ConcatStr,
+                                                                                ),
+                                                                            ),
+                                                                            value: Expr(
+                                                                                Apply {
+                                                                                    lambda: Expr(
+                                                                                        Apply {
+                                                                                            lambda: Expr(
+                                                                                                Builtin(
+                                                                                                    _ConcatStr,
+                                                                                                ),
+                                                                                            ),
+                                                                                            value: Expr(
+                                                                                                Apply {
+                                                                                                    lambda: Expr(
+                                                                                                        Apply {
+                                                                                                            lambda: Expr(
+                                                                                                                Builtin(
+                                                                                                                    _ConcatStr,
+                                                                                                                ),
+                                                                                                            ),
+                                                                                                            value: Expr(
+                                                                                                                Apply {
+                                                                                                                    lambda: Expr(
+                                                                                                                        Apply {
+                                                                                                                            lambda: Expr(
+                                                                                                                                Builtin(
+                                                                                                                                    _ConcatStr,
+                                                                                                                                ),
+                                                                                                                            ),
+                                                                                                                            value: Expr(
+                                                                                                                                Literal(
+                                                                                                                                    String(
+                                                                                                                                        "mirror://gnu/hello/",
+                                                                                                                                    ),
+                                                                                                                                ),
+                                                                                                                            ),
+                                                                                                                        },
+                                                                                                                    ),
+                                                                                                                    value: Debruijn(
+                                                                                                                        2,
+                                                                                                                    ),
+                                                                                                                },
+                                                                                                            ),
+                                                                                                        },
+                                                                                                    ),
+                                                                                                    value: Expr(
+                                                                                                        Literal(
+                                                                                                            String(
+                                                                                                                "-",
+                                                                                                            ),
+                                                                                                        ),
+                                                                                                    ),
+                                                                                                },
+                                                                                            ),
+                                                                                        },
+                                                                                    ),
+                                                                                    value: Debruijn(
+                                                                                        0,
+                                                                                    ),
+                                                                                },
+                                                                            ),
+                                                                        },
+                                                                    ),
+                                                                    value: Expr(
                                                                         Literal(
-                                                                            "mirror://gnu/hello/",
-                                                                        ),
-                                                                        Expr(
-                                                                            Debruijn(
-                                                                                2,
+                                                                            String(
+                                                                                ".tar.gz",
                                                                             ),
                                                                         ),
-                                                                        Literal(
-                                                                            "-",
-                                                                        ),
-                                                                        Expr(
-                                                                            Debruijn(
-                                                                                0,
-                                                                            ),
-                                                                        ),
-                                                                        Literal(
-                                                                            ".tar.gz",
-                                                                        ),
-                                                                    ],
+                                                                    ),
                                                                 },
                                                             ),
                                                         },

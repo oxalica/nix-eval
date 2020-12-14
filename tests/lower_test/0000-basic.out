@@ -3,67 +3,122 @@ Ok(
         AttrSet {
             entries: {
                 "buildPhase": Expr(
-                    Str {
-                        parts: [
-                            Literal(
-                                "echo ",
-                            ),
-                            Expr(
-                                Expr(
-                                    BinOp {
-                                        operator: Add,
-                                        lhs: Expr(
-                                            Literal(
-                                                String(
-                                                    "hello",
+                    Apply {
+                        lambda: Expr(
+                            Apply {
+                                lambda: Expr(
+                                    Builtin(
+                                        _ConcatStr,
+                                    ),
+                                ),
+                                value: Expr(
+                                    Apply {
+                                        lambda: Expr(
+                                            Apply {
+                                                lambda: Expr(
+                                                    Builtin(
+                                                        _ConcatStr,
+                                                    ),
                                                 ),
-                                            ),
+                                                value: Expr(
+                                                    Literal(
+                                                        String(
+                                                            "echo ",
+                                                        ),
+                                                    ),
+                                                ),
+                                            },
                                         ),
-                                        rhs: Expr(
-                                            Literal(
-                                                String(
-                                                    "world",
+                                        value: Expr(
+                                            Apply {
+                                                lambda: Expr(
+                                                    Apply {
+                                                        lambda: Expr(
+                                                            Builtin(
+                                                                Add,
+                                                            ),
+                                                        ),
+                                                        value: Expr(
+                                                            Literal(
+                                                                String(
+                                                                    "hello",
+                                                                ),
+                                                            ),
+                                                        ),
+                                                    },
                                                 ),
-                                            ),
+                                                value: Expr(
+                                                    Literal(
+                                                        String(
+                                                            "world",
+                                                        ),
+                                                    ),
+                                                ),
+                                            },
                                         ),
                                     },
                                 ),
-                            ),
+                            },
+                        ),
+                        value: Expr(
                             Literal(
-                                "",
+                                String(
+                                    "!",
+                                ),
                             ),
-                        ],
+                        ),
                     },
                 ),
                 "cond": Expr(
-                    IfElse {
-                        condition: Expr(
-                            BinOp {
-                                operator: Equal,
-                                lhs: Expr(
-                                    Literal(
-                                        Int(
-                                            0,
+                    Apply {
+                        lambda: Expr(
+                            Apply {
+                                lambda: Expr(
+                                    Apply {
+                                        lambda: Expr(
+                                            Builtin(
+                                                _IfThenElse,
+                                            ),
                                         ),
-                                    ),
+                                        value: Expr(
+                                            Apply {
+                                                lambda: Expr(
+                                                    Apply {
+                                                        lambda: Expr(
+                                                            Builtin(
+                                                                _Equal,
+                                                            ),
+                                                        ),
+                                                        value: Expr(
+                                                            Literal(
+                                                                Int(
+                                                                    0,
+                                                                ),
+                                                            ),
+                                                        ),
+                                                    },
+                                                ),
+                                                value: Expr(
+                                                    Literal(
+                                                        Int(
+                                                            0,
+                                                        ),
+                                                    ),
+                                                ),
+                                            },
+                                        ),
+                                    },
                                 ),
-                                rhs: Expr(
+                                value: Expr(
                                     Literal(
                                         Int(
-                                            0,
+                                            42,
                                         ),
                                     ),
                                 ),
                             },
                         ),
-                        then_body: Expr(
-                            Literal(
-                                Int(
-                                    42,
-                                ),
-                            ),
-                        ),
-                        else_body: Expr(
+                        value: Expr(
                             Literal(
                                 Float(
                                     4.2,
@@ -73,58 +128,88 @@ Ok(
                     },
                 ),
                 "foo": Expr(
-                    Select {
-                        set: Expr(
-                            AttrSet {
-                                entries: {},
-                                dynamics: [],
-                            },
-                        ),
-                        index: Expr(
-                            Literal(
-                                String(
-                                    "a",
-                                ),
-                            ),
-                        ),
-                        or_default: Some(
-                            Expr(
-                                Select {
-                                    set: Expr(
-                                        AttrSet {
-                                            entries: {},
-                                            dynamics: [],
-                                        },
-                                    ),
-                                    index: Expr(
-                                        Literal(
-                                            String(
-                                                "b",
+                    Apply {
+                        lambda: Expr(
+                            Apply {
+                                lambda: Expr(
+                                    Apply {
+                                        lambda: Expr(
+                                            Builtin(
+                                                _SelectOrDefault,
                                             ),
                                         ),
+                                        value: Expr(
+                                            AttrSet {
+                                                entries: {},
+                                                dynamics: [],
+                                            },
+                                        ),
+                                    },
+                                ),
+                                value: Expr(
+                                    Literal(
+                                        String(
+                                            "a",
+                                        ),
                                     ),
-                                    or_default: Some(
-                                        Expr(
-                                            Select {
-                                                set: Expr(
+                                ),
+                            },
+                        ),
+                        value: Expr(
+                            Apply {
+                                lambda: Expr(
+                                    Apply {
+                                        lambda: Expr(
+                                            Apply {
+                                                lambda: Expr(
+                                                    Builtin(
+                                                        _SelectOrDefault,
+                                                    ),
+                                                ),
+                                                value: Expr(
                                                     AttrSet {
                                                         entries: {},
                                                         dynamics: [],
                                                     },
                                                 ),
-                                                index: Expr(
+                                            },
+                                        ),
+                                        value: Expr(
+                                            Literal(
+                                                String(
+                                                    "b",
+                                                ),
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                value: Expr(
+                                    Apply {
+                                        lambda: Expr(
+                                            Apply {
+                                                lambda: Expr(
+                                                    Builtin(
+                                                        GetAttr,
+                                                    ),
+                                                ),
+                                                value: Expr(
                                                     Literal(
                                                         String(
                                                             "c",
                                                         ),
                                                     ),
                                                 ),
-                                                or_default: None,
                                             },
                                         ),
-                                    ),
-                                },
-                            ),
+                                        value: Expr(
+                                            AttrSet {
+                                                entries: {},
+                                                dynamics: [],
+                                            },
+                                        ),
+                                    },
+                                ),
+                            },
                         ),
                     },
                 ),

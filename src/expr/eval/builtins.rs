@@ -6,6 +6,19 @@ use std::sync::Arc;
 pub fn invoke(e: &Evaluator, b: Builtin, args: &[Arc<Thunk>]) -> Result<Value> {
     let err = Err(Error::BuiltinNotImplemented { builtin: b });
     let f = match b {
+        Builtin::_Assert => assert,
+        Builtin::_ConcatStr => concat_str,
+        Builtin::_IfThenElse => if_then_else,
+        Builtin::_SelectOrDefault => return err,
+
+        Builtin::_And => return err,
+        Builtin::_Concat => return err,
+        Builtin::_Equal => return err,
+        Builtin::_Negate => return err,
+        Builtin::_Not => return err,
+        Builtin::_Or => return err,
+        Builtin::_Update => return err,
+
         Builtin::Abort => abort,
         Builtin::Add => add,
         Builtin::All => return err,
@@ -151,6 +164,26 @@ pub fn _arith_op(op: Builtin, a: &Value, b: &Value) -> Result<Value> {
         }),
         _ => unreachable!(),
     })
+}
+
+fn assert(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
+    let cond = args[0].eval(e)?.as_bool()?;
+    if cond {
+        Ok(args[1].eval(e)?.clone())
+    } else {
+        Err(Error::AssertionFailed)
+    }
+}
+
+fn concat_str(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
+    let a = e.eval_coerce_to_string(args[0].eval(e)?)?;
+    let b = e.eval_coerce_to_string(args[0].eval(e)?)?;
+    Ok(Value::String((a.to_string() + &*b).into()))
+}
+
+fn if_then_else(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
+    let cond = args[0].eval(e)?.as_bool()?;
+    Ok(args[if cond { 1 } else { 2 }].eval(e)?.clone())
 }
 
 fn abort(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {

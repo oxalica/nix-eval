@@ -12,33 +12,49 @@ Ok(
                 LetIn {
                     exprs: [
                         Expr(
-                            Select {
-                                set: Debruijn(
+                            Apply {
+                                lambda: Expr(
+                                    Apply {
+                                        lambda: Expr(
+                                            Builtin(
+                                                GetAttr,
+                                            ),
+                                        ),
+                                        value: Expr(
+                                            Literal(
+                                                String(
+                                                    "b",
+                                                ),
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                value: Debruijn(
                                     2,
                                 ),
-                                index: Expr(
-                                    Literal(
-                                        String(
-                                            "b",
-                                        ),
-                                    ),
-                                ),
-                                or_default: None,
                             },
                         ),
                         Expr(
-                            Select {
-                                set: Debruijn(
+                            Apply {
+                                lambda: Expr(
+                                    Apply {
+                                        lambda: Expr(
+                                            Builtin(
+                                                GetAttr,
+                                            ),
+                                        ),
+                                        value: Expr(
+                                            Literal(
+                                                String(
+                                                    "c",
+                                                ),
+                                            ),
+                                        ),
+                                    },
+                                ),
+                                value: Debruijn(
                                     2,
                                 ),
-                                index: Expr(
-                                    Literal(
-                                        String(
-                                            "c",
-                                        ),
-                                    ),
-                                ),
-                                or_default: None,
                             },
                         ),
                     ],
@@ -63,18 +79,26 @@ Ok(
                                             2,
                                         ),
                                         "d": Expr(
-                                            Select {
-                                                set: Debruijn(
+                                            Apply {
+                                                lambda: Expr(
+                                                    Apply {
+                                                        lambda: Expr(
+                                                            Builtin(
+                                                                GetAttr,
+                                                            ),
+                                                        ),
+                                                        value: Expr(
+                                                            Literal(
+                                                                String(
+                                                                    "d",
+                                                                ),
+                                                            ),
+                                                        ),
+                                                    },
+                                                ),
+                                                value: Debruijn(
                                                     0,
                                                 ),
-                                                index: Expr(
-                                                    Literal(
-                                                        String(
-                                                            "d",
-                                                        ),
-                                                    ),
-                                                ),
-                                                or_default: None,
                                             },
                                         ),
                                     },

@@ -1,6 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-pub use rnix::types::{BinOpKind, UnaryOpKind};
 pub use rnix::value::Anchor as PathAnchor;
 pub use rnix::SmolStr;
 
@@ -31,25 +30,11 @@ pub enum Expr {
         lambda: ExprRef,
         value: ExprRef,
     },
-    Assert {
-        condition: ExprRef,
-        body: ExprRef,
-    },
     AttrSet {
         entries: BTreeMap<SmolStr, ExprRef>,
         dynamics: Box<[(ExprRef, ExprRef)]>,
     },
-    BinOp {
-        operator: BinOpKind,
-        lhs: ExprRef,
-        rhs: ExprRef,
-    },
     Builtin(builtins::Builtin),
-    IfElse {
-        condition: ExprRef,
-        then_body: ExprRef,
-        else_body: ExprRef,
-    },
     Lambda {
         arg: LambdaArg,
         body: ExprRef,
@@ -62,18 +47,6 @@ pub enum Expr {
         items: Box<[ExprRef]>,
     },
     Literal(Literal),
-    Select {
-        set: ExprRef,
-        index: ExprRef,
-        or_default: Option<ExprRef>,
-    },
-    Str {
-        parts: Box<[StrPart]>,
-    },
-    UnaryOp {
-        operator: UnaryOpKind,
-        value: ExprRef,
-    },
 }
 
 #[derive(Debug)]
@@ -87,10 +60,4 @@ pub enum LambdaArg {
     },
     /// `{ a, b ? expr, ... }: expr`
     OpenPattern { required_names: Box<[SmolStr]> },
-}
-
-#[derive(Debug)]
-pub enum StrPart {
-    Literal(SmolStr),
-    Expr(ExprRef),
 }

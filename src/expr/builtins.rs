@@ -24,6 +24,22 @@ macro_rules! define_builtin {
 }
 
 define_builtin! {
+    // Internal builtins.
+    _Assert(1),
+    _ConcatStr(2),
+    _IfThenElse(3),
+    _SelectOrDefault(3),
+
+    // Operators.
+    _And(2),
+    _Concat(2),
+    _Equal(2),
+    _Negate(1),
+    _Not(1),
+    _Or(2),
+    _Update(2),
+
+    // Exported builtins.
     Abort(1),
     Add(2),
     All(2),

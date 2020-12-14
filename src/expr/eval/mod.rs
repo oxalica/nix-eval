@@ -1,6 +1,6 @@
 use crate::expr::{
-    builtins::Builtin, expr_ref::ExprRefKind, BinOpKind, Expr, ExprRef, LambdaArg, Literal,
-    PathAnchor, SmolStr, StrPart, UnaryOpKind,
+    builtins::Builtin, expr_ref::ExprRefKind, Expr, ExprRef, LambdaArg, Literal, PathAnchor,
+    SmolStr,
 };
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::PathBuf;
@@ -188,13 +188,6 @@ impl Evaluator {
                     self.eval(body, &lam_stack)
                 }
             }
-            Expr::Assert { condition, body } => {
-                let cond = self.eval(condition, stack)?.as_bool()?;
-                if !cond {
-                    return Err(Error::AssertionFailed);
-                }
-                self.eval(body, stack)
-            }
             Expr::AttrSet { entries, dynamics } => {
                 let mut set = BTreeMap::new();
                 for (key, value) in entries {
@@ -206,21 +199,12 @@ impl Evaluator {
                 }
                 Ok(Value::AttrSet(set))
             }
-            Expr::BinOp { operator, lhs, rhs } => self.eval_binop(*operator, lhs, rhs, stack),
             &Expr::Builtin(b) => {
                 if b.params() == 0 {
                     builtins::invoke(self, b, &[])
                 } else {
                     Ok(Value::PartialBuiltin(b, Vec::new()))
                 }
-            }
-            Expr::IfElse {
-                condition,
-                then_body,
-                else_body,
-            } => {
-                let cond = self.eval(condition, stack)?.as_bool()?;
-                self.eval(if cond { then_body } else { else_body }, stack)
             }
             Expr::Lambda { .. } => Ok(Value::Lambda(expr.clone(), stack.clone())),
             Expr::LetIn { exprs, body } => {
@@ -269,119 +253,7 @@ impl Evaluator {
                     }
                 }),
             }),
-            Expr::Select {
-                set,
-                index,
-                or_default,
-            } => {
-                let set = self.eval(set, stack)?;
-                let set = set.as_attr_set()?;
-                let index = self.eval_coerce_to_string(&self.eval(index, stack)?)?;
-                match (set.get(&*index), or_default) {
-                    // FIXME: No clone.
-                    (Some(v), _) => Ok(v.eval(self)?.clone()),
-                    (None, Some(default)) => self.eval(default, stack),
-                    (None, None) => Err(Error::MissingAttribute { name: index }),
-                }
-            }
-            Expr::Str { parts } => {
-                let mut buf = String::new();
-                for part in parts.iter() {
-                    match part {
-                        StrPart::Literal(s) => buf.push_str(s),
-                        StrPart::Expr(e) => {
-                            let s = self.eval_coerce_to_string(&self.eval(e, stack)?)?;
-                            buf.push_str(&*s);
-                        }
-                    }
-                }
-                Ok(Value::String(buf.into()))
-            }
-            Expr::UnaryOp { operator, value } => {
-                let mut v = self.eval(value, stack)?;
-                match operator {
-                    UnaryOpKind::Invert => Ok(Value::Bool(!v.as_bool()?)),
-                    UnaryOpKind::Negate => {
-                        match &mut v {
-                            Value::Int(x) => *x = x.wrapping_neg(),
-                            Value::Float(x) => *x = -*x,
-                            _ => return Err(v.expecting("int or float")),
-                        }
-                        Ok(v)
-                    }
-                }
-            }
         }
-    }
-
-    fn eval_binop(
-        &self,
-        op: BinOpKind,
-        lhs: &ExprRef,
-        rhs: &ExprRef,
-        stack: &Stack,
-    ) -> Result<Value> {
-        let lhs = self.eval(lhs, stack)?;
-        let rhs = || self.eval(rhs, stack);
-        Ok(match op {
-            BinOpKind::Concat => {
-                let rhs = rhs()?;
-                Value::List(
-                    lhs.as_list()?
-                        .iter()
-                        .chain(rhs.as_list()?.iter())
-                        .cloned()
-                        .collect(),
-                )
-            }
-            BinOpKind::IsSet => {
-                let lhs = lhs.as_attr_set()?;
-                let rhs = self.eval_coerce_to_string(&rhs()?)?;
-                Value::Bool(lhs.contains_key(&*rhs))
-            }
-            BinOpKind::Update => {
-                let mut set = lhs.as_attr_set()?.clone();
-                let rhs = rhs()?;
-                for (k, v) in rhs.as_attr_set()? {
-                    set.insert(k.clone(), v.clone());
-                }
-                Value::AttrSet(set)
-            }
-            BinOpKind::Equal => {
-                let v = self.eval_equal(&lhs, &rhs()?)?;
-                Value::Bool(v)
-            }
-            BinOpKind::NotEqual => {
-                let v = self.eval_equal(&lhs, &rhs()?)?;
-                Value::Bool(!v)
-            }
-            BinOpKind::Add => builtins::_arith_op(Builtin::Add, &lhs, &rhs()?)?,
-            BinOpKind::Sub => builtins::_arith_op(Builtin::Sub, &lhs, &rhs()?)?,
-            BinOpKind::Mul => builtins::_arith_op(Builtin::Mul, &lhs, &rhs()?)?,
-            BinOpKind::Div => builtins::_arith_op(Builtin::Div, &lhs, &rhs()?)?,
-            BinOpKind::And => {
-                let v = lhs.as_bool()? && rhs()?.as_bool()?;
-                Value::Bool(v)
-            }
-            BinOpKind::Or => {
-                let v = lhs.as_bool()? || rhs()?.as_bool()?;
-                Value::Bool(v)
-            }
-            BinOpKind::Implication => {
-                let v = !lhs.as_bool()? || rhs()?.as_bool()?;
-                Value::Bool(v)
-            }
-            BinOpKind::Less => builtins::_arith_op(Builtin::LessThan, &lhs, &rhs()?)?,
-            BinOpKind::More => builtins::_arith_op(Builtin::LessThan, &rhs()?, &lhs)?,
-            BinOpKind::LessOrEq => {
-                let b = builtins::_arith_op(Builtin::LessThan, &rhs()?, &lhs)?.as_bool()?;
-                Value::Bool(!b)
-            }
-            BinOpKind::MoreOrEq => {
-                let b = builtins::_arith_op(Builtin::LessThan, &lhs, &rhs()?)?.as_bool()?;
-                Value::Bool(!b)
-            }
-        })
     }
 
     fn eval_equal(&self, lhs: &Value, rhs: &Value) -> Result<bool> {
