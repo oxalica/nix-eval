@@ -27,6 +27,8 @@ pub enum Error {
     },
     #[error("Builtin not implemented: {:?}", .builtin.name())]
     BuiltinNotImplemented { builtin: Builtin },
+    #[error("Builtin call error: {:?}", .reason)]
+    BuiltinError { reason: SmolStr },
     #[error("Type error: cannot coerce {} to string", .actual)]
     CannotCoerceToString { actual: &'static str },
     #[error("Division by zero")]

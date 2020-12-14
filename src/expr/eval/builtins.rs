@@ -27,7 +27,7 @@ pub fn invoke(e: &Evaluator, b: Builtin, args: &[Arc<Thunk>]) -> Result<Value> {
         Builtin::DirOf => return err,
         Builtin::Div => div,
         Builtin::Elem => return err,
-        Builtin::ElemAt => return err,
+        Builtin::ElemAt => elem_at,
         Builtin::False => return Ok(Value::Bool(false)),
         Builtin::FetchGit => return err,
         Builtin::FetchTarball => return err,
@@ -43,7 +43,7 @@ pub fn invoke(e: &Evaluator, b: Builtin, args: &[Arc<Thunk>]) -> Result<Value> {
         Builtin::HasAttr => return err,
         Builtin::HashFile => return err,
         Builtin::HashString => return err,
-        Builtin::Head => return err,
+        Builtin::Head => head,
         Builtin::Import => return err,
         Builtin::IntersectAttrs => return err,
         Builtin::IsAttrs => return err,
@@ -55,7 +55,7 @@ pub fn invoke(e: &Evaluator, b: Builtin, args: &[Arc<Thunk>]) -> Result<Value> {
         Builtin::IsNull => return err,
         Builtin::IsPath => return err,
         Builtin::IsString => return err,
-        Builtin::Length => return err,
+        Builtin::Length => length,
         Builtin::LessThan => less_than,
         Builtin::ListToAttrs => return err,
         Builtin::Map => return err,
@@ -165,6 +165,29 @@ fn add(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
 
 fn div(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
     _arith_op(Builtin::Div, args[0].eval(e)?, args[1].eval(e)?)
+}
+
+fn elem_at(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
+    let xs = args[0].eval(e)?.as_list()?;
+    let idx = args[1].eval(e)?.as_int()?;
+    if 0 <= idx && idx < xs.len() as i64 {
+        // FIXME: No clone?
+        Ok(xs[idx as usize].eval(e)?.clone())
+    } else {
+        Err(Error::BuiltinError {
+            reason: format!("List index {} out of bound (length is {})", idx, xs.len()).into(),
+        })
+    }
+}
+
+fn head(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
+    let args = [args[0].clone(), Thunk::new_value(Value::Int(0))];
+    elem_at(e, &args)
+}
+
+fn length(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
+    let xs = args[0].eval(e)?.as_list()?;
+    Ok(Value::Int(xs.len() as i64))
 }
 
 fn less_than(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {

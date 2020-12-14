@@ -58,6 +58,13 @@ impl Value {
         }
     }
 
+    pub fn as_int(&self) -> Result<i64> {
+        match self {
+            &Self::Int(x) => Ok(x),
+            _ => Err(self.expecting("int")),
+        }
+    }
+
     pub fn as_attr_set(&self) -> Result<&BTreeMap<SmolStr, Arc<Thunk>>> {
         match self {
             Self::AttrSet(set) => Ok(set),
