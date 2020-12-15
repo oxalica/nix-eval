@@ -79,6 +79,13 @@ impl Value {
         }
     }
 
+    pub fn as_string(&self) -> Result<&str> {
+        match self {
+            Self::String(s) => Ok(&**s),
+            _ => Err(self.expecting("string")),
+        }
+    }
+
     pub fn dump(&self) -> impl fmt::Display + '_ {
         struct Wrapper<'a>(&'a Value);
         impl<'a> fmt::Display for Wrapper<'a> {

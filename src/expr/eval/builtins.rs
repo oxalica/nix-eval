@@ -9,13 +9,13 @@ pub fn invoke(e: &Evaluator, b: Builtin, args: &[Arc<Thunk>]) -> Result<Value> {
         Builtin::_Assert => assert,
         Builtin::_ConcatStr => concat_str,
         Builtin::_IfThenElse => if_then_else,
-        Builtin::_SelectOrDefault => return err,
+        Builtin::_SelectOrDefault => select_or_default,
 
         Builtin::_And => return err,
-        Builtin::_Concat => return err,
-        Builtin::_Equal => return err,
+        Builtin::_Concat => concat,
+        Builtin::_Equal => equal,
         Builtin::_Negate => return err,
-        Builtin::_Not => return err,
+        Builtin::_Not => not,
         Builtin::_Or => return err,
         Builtin::_Update => return err,
 
@@ -51,7 +51,7 @@ pub fn invoke(e: &Evaluator, b: Builtin, args: &[Arc<Thunk>]) -> Result<Value> {
         Builtin::FromJSON => return err,
         Builtin::FunctionArgs => return err,
         Builtin::GenList => return err,
-        Builtin::GetAttr => return err,
+        Builtin::GetAttr => get_attr,
         Builtin::GetEnv => return err,
         Builtin::HasAttr => return err,
         Builtin::HashFile => return err,
@@ -177,13 +177,41 @@ fn assert(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
 
 fn concat_str(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
     let a = e.eval_coerce_to_string(args[0].eval(e)?)?;
-    let b = e.eval_coerce_to_string(args[0].eval(e)?)?;
+    let b = e.eval_coerce_to_string(args[1].eval(e)?)?;
     Ok(Value::String((a.to_string() + &*b).into()))
 }
 
 fn if_then_else(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
     let cond = args[0].eval(e)?.as_bool()?;
     Ok(args[if cond { 1 } else { 2 }].eval(e)?.clone())
+}
+
+fn select_or_default(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
+    let set = args[0].eval(e)?.as_attr_set()?;
+    let name = args[1].eval(e)?.as_string()?;
+    match set.get(name) {
+        Some(v) => Ok(v.eval(e)?.clone()),
+        None => Ok(args[2].eval(e)?.clone()),
+    }
+}
+
+fn concat(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
+    let a = args[0].eval(e)?.as_list()?;
+    let b = args[1].eval(e)?.as_list()?;
+    let v = a.iter().chain(b.iter()).cloned().collect();
+    Ok(Value::List(v))
+}
+
+fn equal(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
+    let lhs = args[0].eval(e)?;
+    let rhs = args[1].eval(e)?;
+    let v = e.eval_equal(lhs, rhs)?;
+    Ok(Value::Bool(v))
+}
+
+fn not(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
+    let v = args[0].eval(e)?.as_bool()?;
+    Ok(Value::Bool(!v))
 }
 
 fn abort(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
@@ -210,6 +238,17 @@ fn elem_at(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
         Err(Error::BuiltinError {
             reason: format!("List index {} out of bound (length is {})", idx, xs.len()).into(),
         })
+    }
+}
+
+fn get_attr(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
+    let name = args[0].eval(e)?.as_string()?;
+    let set = args[1].eval(e)?.as_attr_set()?;
+    match set.get(name) {
+        Some(v) => Ok(v.eval(e)?.clone()),
+        None => Err(Error::BuiltinError {
+            reason: format!("Attribute {:?} not found", name).into(),
+        }),
     }
 }
 
