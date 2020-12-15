@@ -1,37 +1,9 @@
 {
-  arith = [
-    55
-    29
-    546
-    3
-    true
-    false
-  ];
   builtins = [
     true
     false
     true
     false
-  ];
-  eq = [
-    true
-    false
-    true
-    true
-    false
-    true
-    true
-    false
-  ];
-  tryEval = [
-    {
-      success = true;
-      value = 42;
-    }
-    {
-      success = false;
-      value = false;
-    }
   ];
   typeOf = [
     "bool"

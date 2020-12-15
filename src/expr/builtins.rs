@@ -1,7 +1,8 @@
+use super::Continuation;
 use strum::VariantNames;
 
 macro_rules! define_builtin {
-    ($($name:ident($params:tt),)*) => {
+    ($($name:ident($params:tt) $(= $cont:path)?,)*) => {
         /// Builtins.
         ///
         /// https://nixos.org/manual/nix/stable/#ssec-builtins
@@ -16,19 +17,25 @@ macro_rules! define_builtin {
                 $(Builtin::$name,)*
             ];
 
+            pub const CONTINUATIONS: &'static [e::Continuation] = &[
+                $(define_builtin!(__to_cont $($cont)?),)*
+            ];
+
             const PARAMS: &'static [usize] = &[
                 $($params,)*
             ];
         }
     };
+    (__to_cont) => { e::not_impl };
+    (__to_cont $p:path) => { $p };
 }
 
 define_builtin! {
     // Internal builtins.
-    _Assert(1),
-    _ConcatStr(2),
-    _IfThenElse(3),
-    _SelectOrDefault(3),
+    _Assert(1) = e::assert,
+    _ConcatStr(2) = e::concat_str,
+    _IfThenElse(3) = e::if_then_else,
+    _SelectOrDefault(3) = e::select_or_default,
 
     // Operators.
     _And(2),

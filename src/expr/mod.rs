@@ -3,10 +3,9 @@ use std::collections::{BTreeMap, BTreeSet};
 pub use rnix::value::Anchor as PathAnchor;
 pub use rnix::SmolStr;
 
-pub use self::builtins::Builtin;
 pub use self::expr_ref::{ExprRef, ExprRefKind};
+pub use crate::expr::eval::Builtin;
 
-pub mod builtins;
 pub mod eval;
 pub mod expr_ref;
 pub mod lower;
@@ -34,7 +33,7 @@ pub enum Expr {
         entries: BTreeMap<SmolStr, ExprRef>,
         dynamics: Box<[(ExprRef, ExprRef)]>,
     },
-    Builtin(builtins::Builtin),
+    Builtin(Builtin),
     Lambda {
         arg: LambdaArg,
         body: ExprRef,

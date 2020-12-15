@@ -11,7 +11,7 @@
   ];
 
   builtins = [true false builtins.builtins.true builtins.false];
-  tryEval = [(builtins.tryEval 42) (builtins.tryEval (throw "no"))];
+  # tryEval = [(builtins.tryEval 42) (builtins.tryEval (throw "no"))];
   typeOf = with builtins; [
     (typeOf true)
     (typeOf 1)

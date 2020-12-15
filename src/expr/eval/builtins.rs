@@ -1,265 +1,286 @@
-use super::{Error, Evaluator, Result, SmolStr, Thunk, Value};
-use crate::expr::Builtin;
-use std::collections::BTreeMap;
-use std::sync::Arc;
+//! Builtins.
+//! See: https://nixos.org/manual/nix/stable/#ssec-builtins
+use super::{eval, eval_coerce_to_string, Continuation, Error, EvalState, Result, Thunk, Value};
+use strum::VariantNames;
 
-pub fn invoke(e: &Evaluator, b: Builtin, args: &[Arc<Thunk>]) -> Result<Value> {
-    let err = Err(Error::BuiltinNotImplemented { builtin: b });
-    let f = match b {
-        Builtin::_Assert => assert,
-        Builtin::_ConcatStr => concat_str,
-        Builtin::_IfThenElse => if_then_else,
-        Builtin::_SelectOrDefault => return err,
+macro_rules! define_builtin {
+    ($($name:ident($params:tt) $(= $cont:path)?,)*) => {
+        #[derive(Debug, Clone, Copy, strum::EnumVariantNames, strum::EnumIter)]
+        #[strum(serialize_all = "camelCase")]
+        pub enum Builtin {
+            $($name,)*
+        }
 
-        Builtin::_And => return err,
-        Builtin::_Concat => return err,
-        Builtin::_Equal => return err,
-        Builtin::_Negate => return err,
-        Builtin::_Not => return err,
-        Builtin::_Or => return err,
-        Builtin::_Update => return err,
+        impl Builtin {
+            pub const ALL: &'static [Self] = &[
+                $(Builtin::$name,)*
+            ];
 
-        Builtin::Abort => abort,
-        Builtin::Add => add,
-        Builtin::All => return err,
-        Builtin::Any => return err,
-        Builtin::AttrNames => return err,
-        Builtin::AttrValues => return err,
-        Builtin::BaseNameOf => return err,
-        Builtin::BitAnd => return err,
-        Builtin::BitOr => return err,
-        Builtin::BitXor => return err,
-        // FIXME: No clone.
-        Builtin::Builtins => return Ok(e.builtins.eval(e)?.clone()),
-        Builtin::CompareVersions => return err,
-        Builtin::ConcatLists => return err,
-        Builtin::ConcatStringsSep => return err,
-        Builtin::CurrentSystem => return err,
-        Builtin::DeepSeq => return err,
-        Builtin::Derivation => return err,
-        Builtin::DirOf => return err,
-        Builtin::Div => div,
-        Builtin::Elem => return err,
-        Builtin::ElemAt => elem_at,
-        Builtin::False => return Ok(Value::Bool(false)),
-        Builtin::FetchGit => return err,
-        Builtin::FetchTarball => return err,
-        Builtin::Fetchurl => return err,
-        Builtin::Filter => return err,
-        Builtin::FilterSource => return err,
-        Builtin::Foldl_ => return err,
-        Builtin::FromJSON => return err,
-        Builtin::FunctionArgs => return err,
-        Builtin::GenList => return err,
-        Builtin::GetAttr => return err,
-        Builtin::GetEnv => return err,
-        Builtin::HasAttr => return err,
-        Builtin::HashFile => return err,
-        Builtin::HashString => return err,
-        Builtin::Head => head,
-        Builtin::Import => return err,
-        Builtin::IntersectAttrs => return err,
-        Builtin::IsAttrs => return err,
-        Builtin::IsBool => return err,
-        Builtin::IsFloat => return err,
-        Builtin::IsFunction => return err,
-        Builtin::IsInt => return err,
-        Builtin::IsList => return err,
-        Builtin::IsNull => return err,
-        Builtin::IsPath => return err,
-        Builtin::IsString => return err,
-        Builtin::Length => length,
-        Builtin::LessThan => less_than,
-        Builtin::ListToAttrs => return err,
-        Builtin::Map => return err,
-        Builtin::Match => return err,
-        Builtin::Mul => mul,
-        Builtin::ParseDrvName => return err,
-        Builtin::Path => return err,
-        Builtin::PathExists => return err,
-        Builtin::Placeholder => return err,
-        Builtin::ReadDir => return err,
-        Builtin::ReadFile => return err,
-        Builtin::RemoveAttrs => return err,
-        Builtin::ReplaceStrings => return err,
-        Builtin::Seq => return err,
-        Builtin::Sort => return err,
-        Builtin::Split => return err,
-        Builtin::SplitVersion => return err,
-        Builtin::StringLength => return err,
-        Builtin::Sub => sub,
-        Builtin::SubString => return err,
-        Builtin::Tail => return err,
-        Builtin::Throw => throw,
-        Builtin::ToFile => return err,
-        Builtin::ToJSON => return err,
-        Builtin::ToPath => return err,
-        Builtin::ToString => return err,
-        Builtin::ToXML => return err,
-        Builtin::Trace => return err,
-        Builtin::True => return Ok(Value::Bool(true)),
-        Builtin::TryEval => try_eval,
-        Builtin::TypeOf => type_of,
+            const CONTINUATIONS: &'static [Continuation] = &[
+                $(define_builtin!(__to_cont $name $($cont)?),)*
+            ];
+
+            const PARAMS: &'static [usize] = &[
+                $($params,)*
+            ];
+        }
     };
-    f(e, args)
-}
-
-enum ArithArgs {
-    Int(i64, i64),
-    Float(f64, f64),
-    String(SmolStr, SmolStr),
-}
-
-fn _arith_args(
-    operation: &'static str,
-    allow_str: bool,
-    a: &Value,
-    b: &Value,
-) -> Result<ArithArgs> {
-    Ok(match (a, b) {
-        (Value::Int(a), Value::Int(b)) => ArithArgs::Int(*a, *b),
-        (Value::Float(a), Value::Int(b)) => ArithArgs::Float(*a, *b as f64),
-        (Value::Int(a), Value::Float(b)) => ArithArgs::Float(*a as f64, *b),
-        (Value::Float(a), Value::Float(b)) => ArithArgs::Float(*a, *b),
-        (Value::String(a), Value::String(b)) if allow_str => {
-            ArithArgs::String(a.clone(), b.clone())
+    (__to_cont $name:ident) => {{
+        fn not_impl(_: &mut EvalState<'_>) -> Result<()> {
+            unimplemented!(stringify!($name))
         }
-        _ => {
-            return Err(Error::BinOpTypeError {
-                operation,
-                lhs: a.type_name(),
-                rhs: b.type_name(),
-            })
+        not_impl
+    }};
+    (__to_cont $name:ident $p:path) => { $p };
+}
+
+define_builtin! {
+    // Internal builtins.
+    _Assert(2) = assert,
+    _ConcatStr(2) = concat_str,
+    _IfThenElse(3) = if_then_else,
+    _SelectOrDefault(3) = select_or_default,
+
+    // Operators.
+    _And(2) = and,
+    _Concat(2) = concat,
+    _Equal(2) = equal,
+    _Negate(1),
+    _Not(1),
+    _Or(2) = or,
+    _Update(2),
+
+    // Exported builtins.
+    Abort(1),
+    Add(2),
+    All(2),
+    Any(2),
+    AttrNames(1),
+    AttrValues(1),
+    BaseNameOf(1),
+    BitAnd(2),
+    BitOr(2),
+    BitXor(2),
+    Builtins(0) = builtins,
+    CompareVersions(2),
+    ConcatLists(1),
+    ConcatStringsSep(2),
+    CurrentSystem(0),
+    DeepSeq(2),
+    Derivation(1),
+    DirOf(1),
+    Div(2),
+    Elem(2),
+    ElemAt(2),
+    False(0) = false_,
+    FetchGit(1),
+    FetchTarball(1),
+    Fetchurl(1),
+    Filter(2),
+    FilterSource(2),
+    Foldl_(3),
+    FromJSON(1),
+    FunctionArgs(1),
+    GenList(2),
+    GetAttr(2) = get_attr,
+    GetEnv(1),
+    HasAttr(2),
+    HashFile(2),
+    HashString(2),
+    Head(1),
+    Import(1),
+    IntersectAttrs(2),
+    IsAttrs(1),
+    IsBool(1),
+    IsFloat(1),
+    IsFunction(1),
+    IsInt(1),
+    IsList(1),
+    IsNull(1),
+    IsPath(1),
+    IsString(1),
+    Length(1),
+    LessThan(2),
+    ListToAttrs(1),
+    Map(2),
+    Match(2),
+    Mul(2),
+    ParseDrvName(1),
+    Path(1),
+    PathExists(1),
+    Placeholder(1),
+    ReadDir(1),
+    ReadFile(1),
+    RemoveAttrs(2),
+    ReplaceStrings(3),
+    Seq(2),
+    Sort(2),
+    Split(2),
+    SplitVersion(1),
+    StringLength(1),
+    Sub(2),
+    SubString(3),
+    Tail(1),
+    Throw(1),
+    ToFile(2),
+    ToJSON(1),
+    ToPath(1),
+    ToString(1),
+    ToXML(1),
+    Trace(2),
+    True(0) = true_,
+    TryEval(1),
+    TypeOf(1) = type_of,
+}
+
+impl Builtin {
+    pub const GLOBALS: &'static [Self] = &[
+        Builtin::Abort,
+        Builtin::BaseNameOf,
+        Builtin::Builtins,
+        Builtin::Derivation,
+        Builtin::DirOf,
+        Builtin::False,
+        Builtin::FetchTarball,
+        Builtin::Import,
+        Builtin::IsNull,
+        Builtin::Map,
+        Builtin::RemoveAttrs,
+        Builtin::Throw,
+        Builtin::ToString,
+        Builtin::True,
+    ];
+
+    pub fn params(&self) -> usize {
+        Self::PARAMS[*self as usize]
+    }
+
+    pub fn name(&self) -> &'static str {
+        if let Builtin::Foldl_ = self {
+            "foldl'"
+        } else {
+            Self::VARIANTS[*self as usize]
         }
-    })
-}
+    }
 
-pub fn _arith_op(op: Builtin, a: &Value, b: &Value) -> Result<Value> {
-    Ok(match op {
-        Builtin::Add => match _arith_args("add", true, a, b)? {
-            ArithArgs::Int(a, b) => Value::Int(a.wrapping_add(b)),
-            ArithArgs::Float(a, b) => Value::Float(a + b),
-            ArithArgs::String(a, b) => Value::String((a.to_string() + &*b).into()),
-        },
-        Builtin::Sub => match _arith_args("subtract", false, a, b)? {
-            ArithArgs::Int(a, b) => Value::Int(a.wrapping_sub(b)),
-            ArithArgs::Float(a, b) => Value::Float(a - b),
-            _ => unreachable!(),
-        },
-        Builtin::Mul => match _arith_args("multiply", false, a, b)? {
-            ArithArgs::Int(a, b) => Value::Int(a.wrapping_mul(b)),
-            ArithArgs::Float(a, b) => Value::Float(a * b),
-            _ => unreachable!(),
-        },
-        Builtin::Div => match _arith_args("divide", false, a, b)? {
-            ArithArgs::Int(_, b) if b == 0 => return Err(Error::DivisionByZero),
-            ArithArgs::Int(a, b) => Value::Int(a.checked_div(b).ok_or(Error::DivisionOverflow)?),
-            ArithArgs::Float(a, b) => Value::Float(a / b),
-            _ => unreachable!(),
-        },
-        Builtin::LessThan => Value::Bool(match _arith_args("compare", true, a, b)? {
-            ArithArgs::Int(a, b) => a < b,
-            ArithArgs::Float(a, b) => a < b,
-            ArithArgs::String(a, b) => a < b,
-        }),
-        _ => unreachable!(),
-    })
-}
-
-fn assert(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
-    let cond = args[0].eval(e)?.as_bool()?;
-    if cond {
-        Ok(args[1].eval(e)?.clone())
-    } else {
-        Err(Error::AssertionFailed)
+    pub(crate) fn continuation(&self) -> Continuation {
+        Self::CONTINUATIONS[*self as usize]
     }
 }
 
-fn concat_str(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
-    let a = e.eval_coerce_to_string(args[0].eval(e)?)?;
-    let b = e.eval_coerce_to_string(args[0].eval(e)?)?;
-    Ok(Value::String((a.to_string() + &*b).into()))
-}
-
-fn if_then_else(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
-    let cond = args[0].eval(e)?.as_bool()?;
-    Ok(args[if cond { 1 } else { 2 }].eval(e)?.clone())
-}
-
-fn abort(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
-    let v = args[0].eval(e)?;
-    let reason = e.eval_coerce_to_string(v)?;
-    Err(Error::Abort { reason })
-}
-
-fn add(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
-    _arith_op(Builtin::Add, args[0].eval(e)?, args[1].eval(e)?)
-}
-
-fn div(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
-    _arith_op(Builtin::Div, args[0].eval(e)?, args[1].eval(e)?)
-}
-
-fn elem_at(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
-    let xs = args[0].eval(e)?.as_list()?;
-    let idx = args[1].eval(e)?.as_int()?;
-    if 0 <= idx && idx < xs.len() as i64 {
-        // FIXME: No clone?
-        Ok(xs[idx as usize].eval(e)?.clone())
-    } else {
-        Err(Error::BuiltinError {
-            reason: format!("List index {} out of bound (length is {})", idx, xs.len()).into(),
-        })
+def_cont! {
+    fn true_(e) {
+        e.push(Thunk::new_value(Value::Bool(true)));
+        Ok(())
     }
-}
 
-fn head(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
-    let args = [args[0].clone(), Thunk::new_value(Value::Int(0))];
-    elem_at(e, &args)
-}
-
-fn length(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
-    let xs = args[0].eval(e)?.as_list()?;
-    Ok(Value::Int(xs.len() as i64))
-}
-
-fn less_than(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
-    _arith_op(Builtin::LessThan, args[0].eval(e)?, args[1].eval(e)?)
-}
-
-fn mul(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
-    _arith_op(Builtin::Mul, args[0].eval(e)?, args[1].eval(e)?)
-}
-
-fn sub(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
-    _arith_op(Builtin::Sub, args[0].eval(e)?, args[1].eval(e)?)
-}
-
-fn throw(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
-    let reason = e.eval_coerce_to_string(args[0].eval(e)?)?;
-    Err(Error::Throw { reason })
-}
-
-fn try_eval(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
-    let mut set = BTreeMap::new();
-    match args[0].eval(e) {
-        Ok(_) => {
-            let t = Thunk::new_value(Value::Bool(true));
-            set.insert("success".into(), t);
-            set.insert("value".into(), args[0].clone());
-            Ok(Value::AttrSet(set))
-        }
-        Err(err) if err.is_soft_error() => {
-            let f = Thunk::new_value(Value::Bool(false));
-            set.insert("success".into(), f.clone());
-            set.insert("value".into(), f);
-            Ok(Value::AttrSet(set))
-        }
-        Err(err) => Err(err),
+    fn false_(e) {
+        e.push(Thunk::new_value(Value::Bool(false)));
+        Ok(())
     }
-}
 
-fn type_of(e: &Evaluator, args: &[Arc<Thunk>]) -> Result<Value> {
-    let v = args[0].eval(e)?;
-    Ok(Value::String(v.type_name().into()))
+    fn builtins(e) {
+        e.push(e.ctx.builtins.clone());
+        Ok(())
+    }
+
+    fn assert(e, cond: bool, body: thunk) {
+        if !cond {
+            return Err(Error::AssertionFailed);
+        }
+        e.push(body);
+        e.cont(eval);
+        Ok(())
+    }
+
+    fn concat_str(e, a: to_string, b: to_string) {
+        let s = (a.to_string() + b).into();
+        e.push(Thunk::new_value(Value::String(s)));
+        Ok(())
+    }
+
+    fn if_then_else(e, cond: bool, then_body: thunk, else_body: thunk) {
+        e.push(if cond { then_body } else { else_body });
+        e.cont(eval);
+        Ok(())
+    }
+
+    fn select_or_default(e, set: set, name: string, or_default: thunk) {
+        match set.get(&*name) {
+            Some(v) => e.push(v.clone()),
+            None => e.push(or_default),
+        }
+        e.cont(eval);
+        Ok(())
+    }
+
+    fn get_attr(e, name: string, set: set) {
+        match set.get(&*name) {
+            Some(v) => {
+                e.push(v.clone());
+                e.cont(eval);
+                Ok(())
+            }
+            None => Err(Error::BuiltinError { reason: "".into() }),
+        }
+    }
+
+    fn and(e, a: bool, b: thunk) {
+        if a {
+            e.push(b);
+            e.cont(|e| {
+                e.get(0).unwrap()?.as_bool()?;
+                Ok(())
+            });
+            e.cont(eval);
+        } else {
+            e.push(Thunk::new_value(Value::Bool(false)));
+        }
+        Ok(())
+    }
+
+    fn or(e, a: bool, b: thunk) {
+        if a {
+            e.push(Thunk::new_value(Value::Bool(true)));
+        } else {
+            e.push(b);
+            e.cont(|e| {
+                e.get(0).unwrap()?.as_bool()?;
+                Ok(())
+            });
+            e.cont(eval);
+        }
+        Ok(())
+    }
+
+    fn concat(e, a: list, b: list) {
+        let mut v = a.to_vec();
+        v.extend_from_slice(b);
+        e.push(Thunk::new_value(Value::List(v)));
+        Ok(())
+    }
+
+    fn type_of(e, v: any) {
+        e.push(Thunk::new_value(Value::String(v.type_name().into())));
+        Ok(())
+    }
+
+    fn equal(e, a: any, b: any) {
+        let b = match (a, b) {
+            (Value::Bool(a), Value::Bool(b)) => a == b,
+            (Value::Float(a), Value::Float(b)) => a == b,
+            (Value::Int(a), Value::Int(b)) => a == b,
+            (Value::String(a), Value::String(b)) |
+            (Value::Path(a), Value::Path(b)) => a == b,
+            (Value::AttrSet(a), Value::AttrSet(b)) if a.keys().eq(b.keys()) => {
+                todo!();
+            }
+            (Value::List(a), Value::List(b)) if a.len() == b.len() => {
+                todo!();
+            }
+            _ => false,
+        };
+        e.push(Thunk::new_value(Value::Bool(b)));
+        Ok(())
+    }
 }

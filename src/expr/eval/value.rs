@@ -1,11 +1,12 @@
 use crate::expr::{
-    eval::{Error, Evaluator, Result, Stack},
+    eval::{Closure, Error, EvalState, Result},
     Builtin, ExprRef, SmolStr,
 };
+use either::Either;
 use std::cell::UnsafeCell;
 use std::collections::{BTreeMap, HashSet};
 use std::fmt;
-use std::sync::Arc;
+use std::rc::Rc;
 
 const VALUE_DUMP_INDENT: usize = 2;
 
@@ -17,10 +18,10 @@ pub enum Value {
     String(SmolStr),
     Path(SmolStr),
 
-    AttrSet(BTreeMap<SmolStr, Arc<Thunk>>),
-    List(Vec<Arc<Thunk>>),
-    Lambda(ExprRef, Stack),
-    PartialBuiltin(Builtin, Vec<Arc<Thunk>>),
+    AttrSet(BTreeMap<SmolStr, ThunkRef>),
+    List(Vec<ThunkRef>),
+    Lambda(ExprRef, Closure),
+    PartialBuiltin(Builtin, Vec<ThunkRef>),
 }
 
 impl Value {
@@ -44,7 +45,7 @@ impl Value {
         }
     }
 
-    pub fn as_lambda(&self) -> Result<(&ExprRef, &Stack)> {
+    pub fn as_lambda(&self) -> Result<(&ExprRef, &Closure)> {
         match self {
             Self::Lambda(expr, stack) => Ok((&expr, &stack)),
             _ => Err(self.expecting("lambda")),
@@ -65,17 +66,41 @@ impl Value {
         }
     }
 
-    pub fn as_attr_set(&self) -> Result<&BTreeMap<SmolStr, Arc<Thunk>>> {
+    pub fn as_set(&self) -> Result<&BTreeMap<SmolStr, ThunkRef>> {
         match self {
             Self::AttrSet(set) => Ok(set),
             _ => Err(self.expecting("set")),
         }
     }
 
-    pub fn as_list(&self) -> Result<&[Arc<Thunk>]> {
+    pub fn as_list(&self) -> Result<&[ThunkRef]> {
         match self {
             Self::List(v) => Ok(v),
             _ => Err(self.expecting("list")),
+        }
+    }
+
+    pub fn as_string(&self) -> Result<&str> {
+        match self {
+            Self::String(s) => Ok(&**s),
+            _ => Err(self.expecting("string")),
+        }
+    }
+
+    pub fn as_int_or_float(&self) -> Result<Either<i64, f64>> {
+        match self {
+            &Self::Int(x) => Ok(Either::Left(x)),
+            &Self::Float(x) => Ok(Either::Right(x)),
+            _ => Err(self.expecting("int or float")),
+        }
+    }
+
+    pub fn as_int_or_float_or_string(&self) -> Result<Either<Either<i64, f64>, &str>> {
+        match self {
+            &Self::Int(x) => Ok(Either::Left(Either::Left(x))),
+            &Self::Float(x) => Ok(Either::Left(Either::Right(x))),
+            Self::String(s) => Ok(Either::Right(&*s)),
+            _ => Err(self.expecting("int or float or string")),
         }
     }
 
@@ -128,7 +153,7 @@ impl Value {
                         } else {
                             write!(f, "{:?} = ", k)?;
                         }
-                        v.dump_inner(f, indent, visited)?;
+                        v.0.dump_inner(f, indent, visited)?;
                         write!(f, ";\n")?;
                     }
                     indent -= VALUE_DUMP_INDENT;
@@ -143,7 +168,7 @@ impl Value {
                     indent += VALUE_DUMP_INDENT;
                     for v in xs {
                         write!(f, "{:indent$}", "", indent = indent)?;
-                        v.dump_inner(f, indent, visited)?;
+                        v.0.dump_inner(f, indent, visited)?;
                         write!(f, "\n")?;
                     }
                     indent -= VALUE_DUMP_INDENT;
@@ -157,72 +182,95 @@ impl Value {
     }
 }
 
+#[derive(Clone)]
+pub struct ThunkRef(Rc<Thunk>);
+
+impl ThunkRef {
+    // pub fn get_mut(&mut self) -> Option<&mut Value> {
+    //     let t = Rc::get_mut(&mut self.0)?;
+    //     unsafe { &mut *t.inner.get() }
+    // }
+}
+
+impl std::ops::Deref for ThunkRef {
+    type Target = Thunk;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.0
+    }
+}
+
 pub struct Thunk {
     inner: UnsafeCell<ThunkState>,
 }
 
 enum ThunkState {
-    Lazy(ExprRef, Stack),
+    Lazy(ExprRef, Closure),
     Evaluating,
     Done(Result<Value>),
 }
 
 impl Thunk {
-    pub fn new_lazy(expr: ExprRef, stack: Stack) -> Arc<Thunk> {
-        Arc::new(Self {
-            inner: UnsafeCell::new(ThunkState::Lazy(expr, stack)),
-        })
+    pub fn new_lazy(expr: ExprRef, closure: Closure) -> ThunkRef {
+        ThunkRef(Rc::new(Self {
+            inner: UnsafeCell::new(ThunkState::Lazy(expr, closure)),
+        }))
     }
 
-    pub fn new_value(v: Value) -> Arc<Thunk> {
-        Arc::new(Self {
+    pub fn new_value(v: Value) -> ThunkRef {
+        ThunkRef(Rc::new(Self {
             inner: UnsafeCell::new(ThunkState::Done(Ok(v))),
-        })
+        }))
     }
 
-    pub fn new_value_cyclic(f: impl FnOnce(Arc<Thunk>) -> Value) -> Arc<Thunk> {
-        let this = Arc::new(Self {
+    pub fn new_value_cyclic(f: impl FnOnce(ThunkRef) -> Value) -> ThunkRef {
+        let this = Rc::new(Self {
             inner: UnsafeCell::new(ThunkState::Evaluating),
         });
-        let v = f(this.clone());
+        let v = f(ThunkRef(this.clone()));
         unsafe { *this.inner.get() = ThunkState::Done(Ok(v)) };
-        this
+        ThunkRef(this)
     }
 
-    pub unsafe fn set_stack(&self, new_stack: Stack) {
+    pub unsafe fn set_closure(&self, new_closure: Closure) {
         match &mut *self.inner.get() {
-            ThunkState::Lazy(_, stack) => *stack = new_stack,
+            ThunkState::Lazy(_, closure) => *closure = new_closure,
             _ => unreachable!(),
         }
     }
 
-    fn eval_with(&self, f: impl FnOnce(&ExprRef, &Stack) -> Result<Value>) -> Result<&Value> {
-        match unsafe { &*self.inner.get() } {
-            ThunkState::Lazy { .. } => {}
-            ThunkState::Evaluating => return Err(Error::InfiniteRecursion),
-            ThunkState::Done(Ok(v)) => return Ok(v),
-            ThunkState::Done(Err(err)) => return Err(err.clone()),
-        }
-        let (expr, stack) =
-            match unsafe { std::ptr::replace(self.inner.get(), ThunkState::Evaluating) } {
-                ThunkState::Lazy(expr, stack) => (expr, stack),
-                _ => unreachable!(),
-            };
-        let ret = f(&expr, &stack);
-        unsafe { *self.inner.get() = ThunkState::Done(ret) };
+    pub fn unwrap(&self) -> Result<&Value> {
         match unsafe { &*self.inner.get() } {
             ThunkState::Done(Ok(v)) => Ok(v),
-            ThunkState::Done(Err(err)) => Err(err.clone()),
-            _ => unreachable!(),
+            ThunkState::Done(Err(e)) => Err(e.clone()),
+            _ => panic!("Thunk is not ready"),
         }
     }
 
-    pub fn eval(&self, eval: &Evaluator) -> Result<&Value> {
-        self.eval_with(|expr, stack| eval.eval(expr, stack))
-    }
-
-    pub fn eval_deep(&self, eval: &Evaluator) -> Result<&Value> {
-        self.eval_with(|expr, stack| eval.eval_deep(expr, stack))
+    pub(crate) fn eval(e: &mut EvalState<'_>) -> Result<()> {
+        let inner = &e.get(0).inner;
+        match unsafe { &*inner.get() } {
+            ThunkState::Lazy { .. } => {}
+            ThunkState::Evaluating => return Err(Error::InfiniteRecursion),
+            ThunkState::Done(Ok(_)) => return Ok(()),
+            ThunkState::Done(Err(err)) => return Err(err.clone()),
+        }
+        let (expr, closure) =
+            match unsafe { std::ptr::replace(inner.get(), ThunkState::Evaluating) } {
+                ThunkState::Lazy(expr, closure) => (expr, closure),
+                _ => unreachable!(),
+            };
+        e.cont(|e| {
+            let ret = e.pop();
+            let ret = ret.unwrap();
+            let inner = &e.get(0).inner;
+            assert!(matches!(unsafe { &*inner.get() }, ThunkState::Evaluating));
+            // FIXME: No clone.
+            unsafe { *inner.get() = ThunkState::Done(ret.map(|v| v.clone())) };
+            Ok(())
+        });
+        e.translate_expr(expr, closure)?;
+        Ok(())
     }
 
     pub fn dump(&self) -> impl fmt::Display + '_ {
