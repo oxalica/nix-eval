@@ -5,10 +5,10 @@ use std::path::PathBuf;
 
 macro_rules! def_cont {
     ($(
-        fn $name:ident($e:ident $(, $arg:ident : $ty:tt)*)
+        $vis:vis fn $name:ident($e:ident $(, $arg:ident : $ty:tt)*)
         $body:block
     )*) => { $(
-        fn $name($e: &mut EvalState<'_>) -> Result<()> {
+        $vis fn $name($e: &mut crate::expr::eval::EvalState<'_>) -> crate::expr::eval::Result<()> {
             def_cont!(__impl $e $body [] 0usize $($arg $ty)*)
         }
     )* };
@@ -47,8 +47,8 @@ macro_rules! def_cont {
     (__getter bool $x:expr) => { $x.unwrap_value_ref()?.as_bool()? };
     (__getter set $x:expr) => { $x.unwrap_value_ref()?.as_set()? };
     (__getter list $x:expr) => { $x.unwrap_value_ref()?.as_list()? };
-    (__eval to_string) => { eval_coerce_to_string };
-    (__eval $tt:tt) => { eval };
+    (__eval to_string) => { crate::expr::eval::eval_coerce_to_string };
+    (__eval $tt:tt) => { crate::expr::eval::eval };
 }
 
 mod builtins;
@@ -106,7 +106,7 @@ type Continuation = fn(&mut EvalState<'_>) -> Result<()>;
 #[allow(non_upper_case_globals)]
 const eval: Continuation = Thunk::eval;
 
-pub(crate) struct EvalState<'a> {
+pub struct EvalState<'a> {
     ctx: &'a Context,
     conts: Vec<Continuation>,
     data: Vec<Thunk>,
