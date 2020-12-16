@@ -1,0 +1,10 @@
+[
+  true
+  false
+  builtins.true
+  builtins.false
+  builtins.builtins.true
+  builtins.builtins.false
+  builtins.builtins.builtins.true
+  builtins.builtins.builtins.false
+]

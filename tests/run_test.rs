@@ -2,7 +2,8 @@ use nix_eval::expr::{eval::Context, lower::lower};
 use std::{env, fs, path::PathBuf};
 
 fn run_test(base_dir: &str, mut f: impl FnMut(String) -> String) {
-    let trust_me = env::var("TRUST_ME").is_ok();
+    let trust_me = env::var("NIXEVAL_TEST_TRUST_ME").is_ok();
+    let selector = env::var("NIXEVAL_TEST").unwrap_or_default();
 
     let mut tests: Vec<PathBuf> = fs::read_dir(base_dir)
         .unwrap()
@@ -14,6 +15,10 @@ fn run_test(base_dir: &str, mut f: impl FnMut(String) -> String) {
     let mut failed = Vec::new();
     for input_path in &tests {
         let test_name = input_path.file_stem().unwrap().to_string_lossy();
+        if !test_name.contains(&selector) {
+            println!("Skipped {} due to NIXEVAL_TEST", test_name);
+            continue;
+        }
         println!("Testing {}", test_name);
 
         let ans_path = input_path.with_extension("out");

@@ -1,10 +1,4 @@
 {
-  builtins = [
-    true
-    false
-    true
-    false
-  ];
   typeOf = [
     "bool"
     "int"
@@ -13,5 +7,7 @@
     "list"
     "list"
     "list"
+    "lambda"
+    "set"
   ];
 }

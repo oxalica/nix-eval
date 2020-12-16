@@ -1,6 +1,6 @@
 //! Builtins.
 //! See: https://nixos.org/manual/nix/stable/#ssec-builtins
-use super::{Continuation, EvalState, Result};
+use super::{Continuation, Error, EvalState, Result};
 use strum::VariantNames;
 
 mod control;
@@ -33,7 +33,9 @@ macro_rules! define_builtin {
     };
     (__to_cont $name:ident) => {{
         fn not_impl(_: &mut EvalState<'_>) -> Result<()> {
-            unimplemented!(stringify!($name))
+            Err(Error::BuiltinError {
+                reason: concat!("Builtin not implemented: ", stringify!($name)).into(),
+            })
         }
         not_impl
     }};

@@ -231,6 +231,18 @@ impl Thunk {
         }
     }
 
+    pub fn new_value_cyclic(f: impl FnOnce(&Self) -> Value) -> Self {
+        let this = Self {
+            inner: Rc::new(UnsafeCell::new(ThunkState::Evaluating)),
+        };
+        let value = f(&this);
+        unsafe {
+            assert!(matches!(&*this.inner.get(), ThunkState::Evaluating));
+            *this.inner.get() = ThunkState::Done(value);
+        }
+        this
+    }
+
     pub unsafe fn set_closure(&self, new_closure: Closure) {
         match &mut *self.inner.get() {
             ThunkState::Lazy(_, closure) => *closure = new_closure,

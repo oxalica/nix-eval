@@ -1,3 +1,11 @@
 {
-  a = 1;
+  buildPhase = "echo helloworld";
+  cond = 42;
+  foo = 42;
+  hello = "world";
+  paths = [
+    "/path/to/nixpkgs"
+    "/nix"
+    "http://nix"
+  ];
 }

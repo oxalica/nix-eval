@@ -66,21 +66,22 @@ pub struct Context {
 
 impl Context {
     pub fn new(nix_paths: impl IntoIterator<Item = (SmolStr, PathBuf)>) -> Self {
-        let mut set = BTreeMap::new();
-        for &b in Builtin::ALL {
-            let value = match b {
-                // Special cased 0-argument builtins.
-                Builtin::True => Thunk::new_value(Value::Bool(true)),
-                Builtin::False => Thunk::new_value(Value::Bool(false)),
-                Builtin::Builtins => {
-                    Thunk::new_lazy(Expr::Builtin(Builtin::Builtins).into(), Default::default())
-                }
-                b => Thunk::new_value(Value::PartialBuiltin(b, Vec::new())),
-            };
-            set.insert(b.name().into(), value);
-        }
+        let builtins = Thunk::new_value_cyclic(|this| {
+            let mut set = BTreeMap::new();
+            for &b in Builtin::ALL {
+                let value = match b {
+                    // Special cased 0-argument builtins.
+                    Builtin::True => Thunk::new_value(Value::Bool(true)),
+                    Builtin::False => Thunk::new_value(Value::Bool(false)),
+                    Builtin::Builtins => this.clone(),
+                    b => Thunk::new_value(Value::PartialBuiltin(b, Vec::new())),
+                };
+                set.insert(b.name().into(), value);
+            }
+            Value::AttrSet(set)
+        });
         Self {
-            builtins: Thunk::new_value(Value::AttrSet(set)),
+            builtins,
             nix_paths: nix_paths.into_iter().collect(),
         }
     }
