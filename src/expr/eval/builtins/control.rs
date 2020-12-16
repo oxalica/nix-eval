@@ -24,4 +24,16 @@ def_cont! {
         e.cont(eval);
         Ok(())
     }
+
+    pub(crate) fn abort(e, s: to_string) {
+        Err(Error::Abort { reason: s.into() })
+    }
+
+    pub(crate) fn throw(e, s: to_string) {
+        Err(Error::Throw { reason: s.into() })
+    }
+
+    pub(crate) fn try_eval(e, x: thunk) {
+        todo!()
+    }
 }

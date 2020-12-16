@@ -4,6 +4,7 @@ use super::{Continuation, Error, EvalState, Result};
 use strum::VariantNames;
 
 mod control;
+mod list;
 mod ops;
 mod set;
 mod string;
@@ -59,8 +60,8 @@ define_builtin! {
     _Update(2),
 
     // Exported builtins.
-    Abort(1),
-    Add(2),
+    Abort(1) = control::abort,
+    Add(2) = ops::add,
     All(2),
     Any(2),
     AttrNames(1),
@@ -79,7 +80,7 @@ define_builtin! {
     DirOf(1),
     Div(2),
     Elem(2),
-    ElemAt(2),
+    ElemAt(2) = list::elem_at,
     False(0) = util::false_,
     FetchGit(1),
     FetchTarball(1),
@@ -95,7 +96,7 @@ define_builtin! {
     HasAttr(2),
     HashFile(2),
     HashString(2),
-    Head(1),
+    Head(1) = list::head,
     Import(1),
     IntersectAttrs(2),
     IsAttrs(1),
@@ -107,8 +108,8 @@ define_builtin! {
     IsNull(1),
     IsPath(1),
     IsString(1),
-    Length(1),
-    LessThan(2),
+    Length(1) = list::length,
+    LessThan(2) = ops::less_than,
     ListToAttrs(1),
     Map(2),
     Match(2),
@@ -129,7 +130,7 @@ define_builtin! {
     Sub(2),
     SubString(3),
     Tail(1),
-    Throw(1),
+    Throw(1) = control::throw,
     ToFile(2),
     ToJSON(1),
     ToPath(1),
@@ -137,7 +138,7 @@ define_builtin! {
     ToXML(1),
     Trace(2),
     True(0) = util::true_,
-    TryEval(1),
+    TryEval(1) = control::try_eval,
     TypeOf(1) = util::type_of,
 }
 

@@ -42,6 +42,13 @@ def_cont! {
         Ok(())
     }
 
+    pub(crate) fn add(e, a: any, b: any) {
+        let a = a.as_int()?;
+        let b = b.as_int()?;
+        e.push_value(Value::Int(a.wrapping_add(b)));
+        Ok(())
+    }
+
     pub(crate) fn equal(e, a: (any), b: (any)) {
         let v = match (a.unwrap_value_ref()?, b.unwrap_value_ref()?) {
             (Value::Bool(a), Value::Bool(b)) => a == b,
@@ -74,6 +81,11 @@ def_cont! {
             _ => false,
         };
         e.push_value(Value::Bool(v));
+        Ok(())
+    }
+
+    pub(crate) fn less_than(e, a: any, b: any) {
+        e.push_value(Value::Bool(a.as_int()? < b.as_int()?));
         Ok(())
     }
 }

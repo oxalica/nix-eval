@@ -45,6 +45,7 @@ macro_rules! def_cont {
     (__getter to_string $x:expr) => { $x.unwrap_value_ref()?.as_string().unwrap() };
     (__getter string $x:expr) => { $x.unwrap_value_ref()?.as_string()? };
     (__getter bool $x:expr) => { $x.unwrap_value_ref()?.as_bool()? };
+    (__getter int $x:expr) => { $x.unwrap_value_ref()?.as_int()? };
     (__getter set $x:expr) => { $x.unwrap_value_ref()?.as_set()? };
     (__getter list $x:expr) => { $x.unwrap_value_ref()?.as_list()? };
     (__eval to_string) => { crate::expr::eval::eval_coerce_to_string };
