@@ -10,18 +10,17 @@ use std::rc::Rc;
 
 const VALUE_DUMP_INDENT: usize = 2;
 
-#[derive(Clone)]
 pub enum Value {
     Bool(bool),
     Float(f64),
     Int(i64),
-    String(SmolStr),
-    Path(SmolStr),
+    String(String),
+    Path(String),
 
-    AttrSet(BTreeMap<SmolStr, ThunkRef>),
-    List(Vec<ThunkRef>),
+    AttrSet(BTreeMap<SmolStr, Thunk>),
+    List(Vec<Thunk>),
     Lambda(ExprRef, Closure),
-    PartialBuiltin(Builtin, Vec<ThunkRef>),
+    PartialBuiltin(Builtin, Vec<Thunk>),
 }
 
 impl Value {
@@ -66,14 +65,21 @@ impl Value {
         }
     }
 
-    pub fn as_set(&self) -> Result<&BTreeMap<SmolStr, ThunkRef>> {
+    pub fn as_set(&self) -> Result<&BTreeMap<SmolStr, Thunk>> {
         match self {
             Self::AttrSet(set) => Ok(set),
             _ => Err(self.expecting("set")),
         }
     }
 
-    pub fn as_list(&self) -> Result<&[ThunkRef]> {
+    pub fn as_list(&self) -> Result<&[Thunk]> {
+        match self {
+            Self::List(v) => Ok(v),
+            _ => Err(self.expecting("list")),
+        }
+    }
+
+    pub fn into_list(self) -> Result<Vec<Thunk>> {
         match self {
             Self::List(v) => Ok(v),
             _ => Err(self.expecting("list")),
@@ -83,6 +89,13 @@ impl Value {
     pub fn as_string(&self) -> Result<&str> {
         match self {
             Self::String(s) => Ok(&**s),
+            _ => Err(self.expecting("string")),
+        }
+    }
+
+    pub fn into_string(self) -> Result<String> {
+        match self {
+            Self::String(s) => Ok(s),
             _ => Err(self.expecting("string")),
         }
     }
@@ -153,7 +166,7 @@ impl Value {
                         } else {
                             write!(f, "{:?} = ", k)?;
                         }
-                        v.0.dump_inner(f, indent, visited)?;
+                        v.dump_inner(f, indent, visited)?;
                         write!(f, ";\n")?;
                     }
                     indent -= VALUE_DUMP_INDENT;
@@ -168,7 +181,7 @@ impl Value {
                     indent += VALUE_DUMP_INDENT;
                     for v in xs {
                         write!(f, "{:indent$}", "", indent = indent)?;
-                        v.0.dump_inner(f, indent, visited)?;
+                        v.dump_inner(f, indent, visited)?;
                         write!(f, "\n")?;
                     }
                     indent -= VALUE_DUMP_INDENT;
@@ -182,54 +195,40 @@ impl Value {
     }
 }
 
+// Invariant:
+// - Only reference to the value of `Done` can be got.
+// - Once the state becomes `{Done, Err}`, it will never changed anymore.
+// - If it is `ForwardTo`, then the referenced thunk must be `Done`.
 #[derive(Clone)]
-pub struct ThunkRef(Rc<Thunk>);
-
-impl ThunkRef {
-    // pub fn get_mut(&mut self) -> Option<&mut Value> {
-    //     let t = Rc::get_mut(&mut self.0)?;
-    //     unsafe { &mut *t.inner.get() }
-    // }
-}
-
-impl std::ops::Deref for ThunkRef {
-    type Target = Thunk;
-
-    fn deref(&self) -> &Self::Target {
-        &*self.0
-    }
-}
-
 pub struct Thunk {
-    inner: UnsafeCell<ThunkState>,
+    inner: Rc<UnsafeCell<ThunkState>>,
 }
 
 enum ThunkState {
     Lazy(ExprRef, Closure),
     Evaluating,
-    Done(Result<Value>),
+    ForwardTo(Thunk),
+    Done(Value),
+    Err(Error),
 }
 
 impl Thunk {
-    pub fn new_lazy(expr: ExprRef, closure: Closure) -> ThunkRef {
-        ThunkRef(Rc::new(Self {
-            inner: UnsafeCell::new(ThunkState::Lazy(expr, closure)),
-        }))
+    pub fn new_lazy(expr: ExprRef, closure: Closure) -> Self {
+        Self {
+            inner: Rc::new(UnsafeCell::new(ThunkState::Lazy(expr, closure))),
+        }
     }
 
-    pub fn new_value(v: Value) -> ThunkRef {
-        ThunkRef(Rc::new(Self {
-            inner: UnsafeCell::new(ThunkState::Done(Ok(v))),
-        }))
+    pub fn new_value(v: Value) -> Self {
+        Self {
+            inner: Rc::new(UnsafeCell::new(ThunkState::Done(v))),
+        }
     }
 
-    pub fn new_value_cyclic(f: impl FnOnce(ThunkRef) -> Value) -> ThunkRef {
-        let this = Rc::new(Self {
-            inner: UnsafeCell::new(ThunkState::Evaluating),
-        });
-        let v = f(ThunkRef(this.clone()));
-        unsafe { *this.inner.get() = ThunkState::Done(Ok(v)) };
-        ThunkRef(this)
+    pub fn new_error(e: Error) -> Self {
+        Self {
+            inner: Rc::new(UnsafeCell::new(ThunkState::Err(e))),
+        }
     }
 
     pub unsafe fn set_closure(&self, new_closure: Closure) {
@@ -239,21 +238,40 @@ impl Thunk {
         }
     }
 
-    pub fn unwrap(&self) -> Result<&Value> {
+    pub fn unwrap_value(&mut self) -> Result<Either<Value, &Value>> {
+        if let Some(inner) = Rc::get_mut(&mut self.inner) {
+            if let ThunkState::Done(v) = unsafe { &mut *inner.get() } {
+                return Ok(Either::Left(std::mem::replace(v, Value::Bool(false))));
+            }
+        }
+        self.unwrap_value_ref().map(Either::Right)
+    }
+
+    pub fn unwrap_value_ref(&self) -> Result<&Value> {
         match unsafe { &*self.inner.get() } {
-            ThunkState::Done(Ok(v)) => Ok(v),
-            ThunkState::Done(Err(e)) => Err(e.clone()),
-            _ => panic!("Thunk is not ready"),
+            ThunkState::Done(v) => Ok(v),
+            ThunkState::Err(e) => Err(e.clone()),
+            ThunkState::ForwardTo(t) => match unsafe { &*t.inner.get() } {
+                ThunkState::Done(v) => Ok(v),
+                _ => unreachable!(),
+            },
+            ThunkState::Lazy(..) | ThunkState::Evaluating => panic!("Thunk is not ready"),
         }
     }
 
     pub(crate) fn eval(e: &mut EvalState<'_>) -> Result<()> {
-        let inner = &e.get(0).inner;
+        let inner = &*e.get(0).inner;
         match unsafe { &*inner.get() } {
             ThunkState::Lazy { .. } => {}
             ThunkState::Evaluating => return Err(Error::InfiniteRecursion),
-            ThunkState::Done(Ok(_)) => return Ok(()),
-            ThunkState::Done(Err(err)) => return Err(err.clone()),
+            ThunkState::Done(_) => return Ok(()),
+            ThunkState::Err(e) => return Err(e.clone()),
+            ThunkState::ForwardTo(referee) => {
+                let referee = referee.clone();
+                e.pop();
+                e.push(referee);
+                return Ok(());
+            }
         }
         let (expr, closure) =
             match unsafe { std::ptr::replace(inner.get(), ThunkState::Evaluating) } {
@@ -262,11 +280,22 @@ impl Thunk {
             };
         e.cont(|e| {
             let ret = e.pop();
-            let ret = ret.unwrap();
-            let inner = &e.get(0).inner;
-            assert!(matches!(unsafe { &*inner.get() }, ThunkState::Evaluating));
-            // FIXME: No clone.
-            unsafe { *inner.get() = ThunkState::Done(ret.map(|v| v.clone())) };
+            let inner = &*e.get(0).inner;
+            unsafe {
+                assert!(matches!(&*inner.get(), ThunkState::Evaluating));
+                *inner.get() = match Rc::try_unwrap(ret.inner) {
+                    Ok(st) => {
+                        let st = st.into_inner();
+                        assert!(matches!(&st, ThunkState::Done(_) | ThunkState::Err(_) | ThunkState::ForwardTo(_)));
+                        st
+                    }
+                    Err(rc) => match &*rc.get() {
+                        // Compress forwarding path.
+                        ThunkState::ForwardTo(referee) => ThunkState::ForwardTo(referee.clone()),
+                        _ => ThunkState::ForwardTo(Thunk { inner: rc }),
+                    }
+                };
+            }
             Ok(())
         });
         e.translate_expr(expr, closure)?;
@@ -291,8 +320,9 @@ impl Thunk {
     ) -> fmt::Result {
         match unsafe { &*self.inner.get() } {
             ThunkState::Lazy(..) | ThunkState::Evaluating => f.write_str("<CODE>"),
-            ThunkState::Done(Err(_)) => f.write_str("<ERROR>"),
-            ThunkState::Done(Ok(v)) => v.dump_inner(f, indent, visited),
+            ThunkState::Err(_) => f.write_str("<ERROR>"),
+            ThunkState::Done(v) => v.dump_inner(f, indent, visited),
+            ThunkState::ForwardTo(t) => t.dump_inner(f, indent, visited),
         }
     }
 }

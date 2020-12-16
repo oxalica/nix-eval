@@ -1,10 +1,11 @@
 use crate::expr::{expr_ref::ExprRefKind, Expr, ExprRef, LambdaArg, Literal, PathAnchor, SmolStr};
+use either::Either;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::PathBuf;
 
 macro_rules! def_cont {
     ($(
-        fn $name:ident($e:ident $(, $arg:ident : $ty:ident)*)
+        fn $name:ident($e:ident $(, $arg:ident : $ty:tt)*)
         $body:block
     )*) => { $(
         fn $name($e: &mut EvalState<'_>) -> Result<()> {
@@ -17,17 +18,17 @@ macro_rules! def_cont {
     (__impl $e:ident $body:block [$($getter:stmt;)*] $idx:tt $arg:ident thunk $($rest:tt)*) => {
         def_cont!(__impl $e $body [$($getter;)* let $arg = $e.pop();] ($idx + 1usize) $($rest)*)
     };
-    (__impl $e:ident $body:block [$($getter:stmt;)*] $idx:tt $arg:ident $ty:ident $($rest:tt)*) => {{
+    (__impl $e:ident $body:block [$($getter:stmt;)*] $idx:tt $arg:ident $ty:tt $($rest:tt)*) => {{
         $e.swap_arg($idx);
         $e.cont(|$e| {
             $e.swap_arg($idx);
-            let _ = def_cont!(__getter $ty $e.get($idx).unwrap()?);
+            let _ = def_cont!(__checker $ty $e.get($idx));
             def_cont!(
                 __impl $e $body
                 [
                     $($getter;)*
                     let $arg = $e.pop();
-                    let $arg = def_cont!(__getter $ty $arg.unwrap()?);
+                    let $arg = def_cont!(__getter $ty $arg);
                 ]
                 ($idx + 1usize)
                 $($rest)*
@@ -36,12 +37,16 @@ macro_rules! def_cont {
         $e.cont(def_cont!(__eval $ty));
         Ok(())
     }};
-    (__getter any $x:expr) => { $x };
-    (__getter to_string $x:expr) => { $x.as_string().unwrap() };
-    (__getter string $x:expr) => { $x.as_string()? };
-    (__getter bool $x:expr) => { $x.as_bool()? };
-    (__getter set $x:expr) => { $x.as_set()? };
-    (__getter list $x:expr) => { $x.as_list()? };
+    (__checker ($ty:tt) $x:expr) => { def_cont!(__getter $ty $x) };
+    (__checker $ty:tt $x:expr) => { def_cont!(__getter $ty $x) };
+    // Check only.
+    (__getter ($ty:tt) $x:expr) => { $x };
+    (__getter any $x:expr) => { $x.unwrap_value_ref()? };
+    (__getter to_string $x:expr) => { $x.unwrap_value_ref()?.as_string().unwrap() };
+    (__getter string $x:expr) => { $x.unwrap_value_ref()?.as_string()? };
+    (__getter bool $x:expr) => { $x.unwrap_value_ref()?.as_bool()? };
+    (__getter set $x:expr) => { $x.unwrap_value_ref()?.as_set()? };
+    (__getter list $x:expr) => { $x.unwrap_value_ref()?.as_list()? };
     (__eval to_string) => { eval_coerce_to_string };
     (__eval $tt:tt) => { eval };
 }
@@ -52,31 +57,30 @@ mod value;
 
 pub use self::builtins::Builtin;
 pub use self::error::{Error, Result};
-pub use self::value::{Thunk, ThunkRef, Value};
+pub use self::value::{Thunk, Value};
 
 pub struct Context {
-    builtins: ThunkRef,
+    builtins: Thunk,
     nix_paths: HashMap<SmolStr, PathBuf>,
 }
 
 impl Context {
     pub fn new(nix_paths: impl IntoIterator<Item = (SmolStr, PathBuf)>) -> Self {
-        let builtins = Thunk::new_value_cyclic(|this| {
-            let mut set = BTreeMap::new();
-            for &b in Builtin::ALL {
-                let value = match b {
-                    // Special cased 0-argument builtins.
-                    Builtin::True => Thunk::new_value(Value::Bool(true)),
-                    Builtin::False => Thunk::new_value(Value::Bool(false)),
-                    Builtin::Builtins => this.clone(),
-                    b => Thunk::new_value(Value::PartialBuiltin(b, Vec::new())),
-                };
-                set.insert(b.name().into(), value);
-            }
-            Value::AttrSet(set)
-        });
+        let mut set = BTreeMap::new();
+        for &b in Builtin::ALL {
+            let value = match b {
+                // Special cased 0-argument builtins.
+                Builtin::True => Thunk::new_value(Value::Bool(true)),
+                Builtin::False => Thunk::new_value(Value::Bool(false)),
+                Builtin::Builtins => {
+                    Thunk::new_lazy(Expr::Builtin(Builtin::Builtins).into(), Default::default())
+                }
+                b => Thunk::new_value(Value::PartialBuiltin(b, Vec::new())),
+            };
+            set.insert(b.name().into(), value);
+        }
         Self {
-            builtins,
+            builtins: Thunk::new_value(Value::AttrSet(set)),
             nix_paths: nix_paths.into_iter().collect(),
         }
     }
@@ -89,9 +93,11 @@ impl Context {
             e.cont(eval);
         }
         e.translate_expr(expr, Default::default())?;
-        let t = e.run()?;
-        // FIXME: No clone.
-        Ok(t.unwrap()?.clone())
+        let mut t = e.run()?;
+        match t.unwrap_value()? {
+            Either::Left(v) => Ok(v),
+            Either::Right(_) => unreachable!(),
+        }
     }
 }
 
@@ -103,11 +109,11 @@ const eval: Continuation = Thunk::eval;
 pub(crate) struct EvalState<'a> {
     ctx: &'a Context,
     conts: Vec<Continuation>,
-    data: Vec<ThunkRef>,
+    data: Vec<Thunk>,
 }
 
 // FIXME: Cyclic reference.
-type Closure = im::Vector<ThunkRef>;
+type Closure = im::Vector<Thunk>;
 
 impl<'a> EvalState<'a> {
     fn new(ctx: &'a Context) -> Self {
@@ -118,7 +124,7 @@ impl<'a> EvalState<'a> {
         }
     }
 
-    fn run(&mut self) -> Result<ThunkRef> {
+    fn run(&mut self) -> Result<Thunk> {
         while let Some(cont) = self.conts.pop() {
             cont(self)?;
         }
@@ -130,15 +136,15 @@ impl<'a> EvalState<'a> {
         self.conts.push(f);
     }
 
-    fn push(&mut self, data: ThunkRef) {
+    fn push(&mut self, data: Thunk) {
         self.data.push(data)
     }
 
-    fn pop(&mut self) -> ThunkRef {
+    fn pop(&mut self) -> Thunk {
         self.data.pop().unwrap()
     }
 
-    fn get(&self, reverse_idx: usize) -> &ThunkRef {
+    fn get(&self, reverse_idx: usize) -> &Thunk {
         &self.data[self.data.len() - 1 - reverse_idx]
     }
 
@@ -216,9 +222,9 @@ impl<'a> EvalState<'a> {
                     &Literal::Bool(x) => Value::Bool(x),
                     &Literal::Float(x) => Value::Float(x),
                     &Literal::Int(x) => Value::Int(x),
-                    Literal::String(x) => Value::String(x.clone()),
+                    Literal::String(s) => Value::String(s.to_string()),
                     Literal::Path(anchor, p) => Value::Path(match anchor {
-                        PathAnchor::Absolute => p.clone(),
+                        PathAnchor::Absolute => p.to_string(),
                         PathAnchor::Relative => {
                             todo!()
                         }
@@ -251,7 +257,7 @@ fn eval_apply(e: &mut EvalState<'_>) -> Result<()> {
     let lam = e.pop();
     let arg = e.pop();
 
-    let lam_value = lam.unwrap()?;
+    let lam_value = lam.unwrap_value_ref()?;
     match lam_value {
         Value::PartialBuiltin(b, args) => {
             // FIXME: No clone.
@@ -288,9 +294,9 @@ fn eval_apply(e: &mut EvalState<'_>) -> Result<()> {
 
     e.cont(|e| {
         let arg = e.pop();
-        let set = arg.unwrap()?.as_set()?;
+        let set = arg.unwrap_value_ref()?.as_set()?;
         let lam = e.pop();
-        let (lam_expr, lam_closure) = lam.unwrap()?.as_lambda()?;
+        let (lam_expr, lam_closure) = lam.unwrap_value_ref()?.as_lambda()?;
 
         let body = match lam_expr.kind() {
             ExprRefKind::Expr(Expr::Lambda {
@@ -345,8 +351,7 @@ fn eval_apply(e: &mut EvalState<'_>) -> Result<()> {
 // TODO: Handle path and derivations.
 fn eval_coerce_to_string(e: &mut EvalState<'_>) -> Result<()> {
     e.cont(|e| {
-        let v = e.get(0).unwrap()?;
-        let _ = v.as_string()?;
+        let _ = e.get(0).unwrap_value_ref()?.as_string()?;
         Ok(())
     });
     e.cont(eval);
@@ -357,7 +362,7 @@ fn eval_deep(e: &mut EvalState<'_>) -> Result<()> {
     e.cont(|e| {
         // Avoid lifetime issurs on `e`.
         let t = e.get(0).clone();
-        match t.unwrap()? {
+        match t.unwrap_value_ref()? {
             Value::Bool(_)
             | Value::Float(_)
             | Value::Int(_)

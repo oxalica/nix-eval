@@ -1,6 +1,7 @@
 //! Builtins.
 //! See: https://nixos.org/manual/nix/stable/#ssec-builtins
 use super::{eval, eval_coerce_to_string, Continuation, Error, EvalState, Result, Thunk, Value};
+use either::Either;
 use strum::VariantNames;
 
 macro_rules! define_builtin {
@@ -193,9 +194,19 @@ def_cont! {
         Ok(())
     }
 
-    fn concat_str(e, a: to_string, b: to_string) {
-        let s = (a.to_string() + b).into();
-        e.push(Thunk::new_value(Value::String(s)));
+    fn concat_str(e, a: (to_string), b: to_string) {
+        let mut a = a;
+        let s = match a.unwrap_value()? {
+            Either::Left(a) => a.into_string()? + b,
+            Either::Right(a) => {
+                let a = a.as_string()?;
+                let mut s = String::with_capacity(a.len() + b.len());
+                s.push_str(a);
+                s.push_str(b);
+                s
+            }
+        };
+        e.push(Thunk::new_value(Value::String(s.into())));
         Ok(())
     }
 
@@ -229,7 +240,7 @@ def_cont! {
         if a {
             e.push(b);
             e.cont(|e| {
-                e.get(0).unwrap()?.as_bool()?;
+                let _ = e.get(0).unwrap_value_ref()?.as_bool()?;
                 Ok(())
             });
             e.cont(eval);
@@ -245,7 +256,7 @@ def_cont! {
         } else {
             e.push(b);
             e.cont(|e| {
-                e.get(0).unwrap()?.as_bool()?;
+                let _ = e.get(0).unwrap_value_ref()?.as_bool()?;
                 Ok(())
             });
             e.cont(eval);
