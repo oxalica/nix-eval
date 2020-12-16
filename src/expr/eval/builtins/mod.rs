@@ -52,7 +52,7 @@ define_builtin! {
     _Concat(2) = ops::concat,
     _Equal(2) = ops::equal,
     _Negate(1),
-    _Not(1),
+    _Not(1) = ops::not,
     _Or(2) = ops::or,
     _Update(2),
 

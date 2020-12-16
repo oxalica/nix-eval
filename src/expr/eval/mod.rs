@@ -148,6 +148,10 @@ impl<'a> EvalState<'a> {
         self.data.pop().unwrap()
     }
 
+    fn pop_many(&mut self, cnt: usize) {
+        self.data.truncate(self.data.len() - cnt);
+    }
+
     fn get(&self, reverse_idx: usize) -> &Thunk {
         &self.data[self.data.len() - 1 - reverse_idx]
     }
