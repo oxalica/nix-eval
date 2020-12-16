@@ -1,4 +1,4 @@
-use crate::expr::eval::{Thunk, Value};
+use crate::expr::eval::Value;
 
 def_cont! {
     pub(crate) fn true_(_e) {
@@ -15,7 +15,7 @@ def_cont! {
     }
 
     pub(crate) fn type_of(e, v: any) {
-        e.push(Thunk::new_value(Value::String(v.type_name().into())));
+        e.push_value(Value::String(v.type_name().into()));
         Ok(())
     }
 }

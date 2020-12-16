@@ -1,4 +1,4 @@
-use crate::expr::eval::{eval, Thunk, Value};
+use crate::expr::eval::{eval, Value};
 
 def_cont! {
     pub(crate) fn and(e, a: bool, b: thunk) {
@@ -10,14 +10,14 @@ def_cont! {
             });
             e.cont(eval);
         } else {
-            e.push(Thunk::new_value(Value::Bool(false)));
+            e.push_value(Value::Bool(false));
         }
         Ok(())
     }
 
     pub(crate) fn or(e, a: bool, b: thunk) {
         if a {
-            e.push(Thunk::new_value(Value::Bool(true)));
+            e.push_value(Value::Bool(true));
         } else {
             e.push(b);
             e.cont(|e| {
@@ -32,7 +32,7 @@ def_cont! {
     pub(crate) fn concat(e, a: list, b: list) {
         let mut v = a.to_vec();
         v.extend_from_slice(b);
-        e.push(Thunk::new_value(Value::List(v)));
+        e.push_value(Value::List(v));
         Ok(())
     }
 
@@ -51,7 +51,7 @@ def_cont! {
             }
             _ => false,
         };
-        e.push(Thunk::new_value(Value::Bool(b)));
+        e.push_value(Value::Bool(b));
         Ok(())
     }
 }

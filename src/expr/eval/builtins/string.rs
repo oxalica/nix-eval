@@ -1,4 +1,4 @@
-use crate::expr::eval::{Thunk, Value};
+use crate::expr::eval::Value;
 use either::Either;
 
 def_cont! {
@@ -14,7 +14,7 @@ def_cont! {
                 s
             }
         };
-        e.push(Thunk::new_value(Value::String(s.into())));
+        e.push_value(Value::String(s.into()));
         Ok(())
     }
 }

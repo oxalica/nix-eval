@@ -140,6 +140,10 @@ impl<'a> EvalState<'a> {
         self.data.push(data)
     }
 
+    fn push_value(&mut self, v: Value) {
+        self.push(Thunk::new_value(v));
+    }
+
     fn pop(&mut self) -> Thunk {
         self.data.pop().unwrap()
     }
@@ -181,21 +185,18 @@ impl<'a> EvalState<'a> {
                 if !dynamics.is_empty() {
                     unimplemented!();
                 }
-                self.push(Thunk::new_value(Value::AttrSet(set)));
+                self.push_value(Value::AttrSet(set));
             }
             &Expr::Builtin(b) => {
                 if b.params() == 0 {
                     self.cont(b.continuation());
                 } else {
-                    self.push(Thunk::new_value(Value::PartialBuiltin(
-                        b,
-                        Vec::with_capacity(3),
-                    )));
+                    self.push_value(Value::PartialBuiltin(b, Vec::with_capacity(3)));
                 }
             }
             Expr::Lambda { .. } => {
                 let v = Value::Lambda(expr_ref.clone(), closure);
-                self.push(Thunk::new_value(v));
+                self.push_value(v);
             }
             Expr::LetIn { exprs, body } => {
                 let mut closure = closure;
@@ -215,7 +216,7 @@ impl<'a> EvalState<'a> {
                     .map(|e| Thunk::new_lazy(e.clone(), closure.clone()))
                     .collect();
                 let v = Value::List(list);
-                self.push(Thunk::new_value(v));
+                self.push_value(v);
             }
             Expr::Literal(lit) => {
                 let v = match lit {
@@ -246,7 +247,7 @@ impl<'a> EvalState<'a> {
                         }
                     }),
                 };
-                self.push(Thunk::new_value(v));
+                self.push_value(v);
             }
         }
         Ok(())
@@ -271,7 +272,7 @@ fn eval_apply(e: &mut EvalState<'_>) -> Result<()> {
                 }
                 e.cont(b.continuation());
             } else {
-                e.push(Thunk::new_value(Value::PartialBuiltin(*b, args)));
+                e.push_value(Value::PartialBuiltin(*b, args));
             }
             return Ok(());
         }
